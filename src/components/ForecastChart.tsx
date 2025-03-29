@@ -1,140 +1,203 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-// Mock data for the forecast
-const forecastData = [
-  { time: '00:00', kpIndex: 2, probability: 0.1 },
-  { time: '03:00', kpIndex: 2.3, probability: 0.2 },
-  { time: '06:00', kpIndex: 3, probability: 0.3 },
-  { time: '09:00', kpIndex: 5, probability: 0.7 },
-  { time: '12:00', kpIndex: 6, probability: 0.8 },
-  { time: '15:00', kpIndex: 4, probability: 0.6 },
-  { time: '18:00', kpIndex: 3, probability: 0.3 },
-  { time: '21:00', kpIndex: 2, probability: 0.2 },
-  { time: '24:00', kpIndex: 1.5, probability: 0.1 },
-];
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="glass-panel p-3">
-        <p className="text-sm font-medium">{`Time: ${label}`}</p>
-        <p className="text-xs font-medium text-primary">
-          {`Kp-Index: ${payload[0].value}`}
-        </p>
-        <p className="text-xs font-medium text-accent">
-          {`Storm Probability: ${payload[1].value * 100}%`}
-        </p>
-      </div>
-    );
-  }
-
-  return null;
+export type ForecastDataPoint = {
+  period: string;
+  kpIndex: number;
+  solarWindSpeed: number;
+  solarFlaresProbability: number;
+  geomagneticStormProbability: number;
+  radiationStormProbability: number;
+  predictionConfidence: number;
+  activityLevel: 'low' | 'moderate' | 'high' | 'severe';
 };
 
-const ForecastChart: React.FC<{ className?: string }> = ({ className }) => {
-  const getKpIndexSeverity = (kpIndex: number) => {
-    if (kpIndex >= 5) return 'high';
-    if (kpIndex >= 3) return 'moderate';
-    return 'low';
-  };
+interface ForecastChartProps {
+  data?: ForecastDataPoint[];
+  className?: string;
+}
 
-  // Calculate the max Kp index in the forecast
-  const maxKpIndex = Math.max(...forecastData.map(d => d.kpIndex));
-  const maxKpTime = forecastData.find(d => d.kpIndex === maxKpIndex)?.time || '';
-  const severity = getKpIndexSeverity(maxKpIndex);
+// Mock data for default display
+const mockForecastData: ForecastDataPoint[] = [
+  { 
+    period: 'Jun 12, 10AM', 
+    kpIndex: 2.5, 
+    solarWindSpeed: 380, 
+    solarFlaresProbability: 0.2, 
+    geomagneticStormProbability: 0.15, 
+    radiationStormProbability: 0.1,
+    predictionConfidence: 0.85,
+    activityLevel: 'low'
+  },
+  { 
+    period: 'Jun 12, 2PM', 
+    kpIndex: 3.2, 
+    solarWindSpeed: 420, 
+    solarFlaresProbability: 0.25, 
+    geomagneticStormProbability: 0.3, 
+    radiationStormProbability: 0.15,
+    predictionConfidence: 0.8,
+    activityLevel: 'moderate'
+  },
+  { 
+    period: 'Jun 12, 6PM', 
+    kpIndex: 4.1, 
+    solarWindSpeed: 480, 
+    solarFlaresProbability: 0.3, 
+    geomagneticStormProbability: 0.4, 
+    radiationStormProbability: 0.25,
+    predictionConfidence: 0.75,
+    activityLevel: 'moderate'
+  },
+  { 
+    period: 'Jun 12, 10PM', 
+    kpIndex: 4.8, 
+    solarWindSpeed: 550, 
+    solarFlaresProbability: 0.4, 
+    geomagneticStormProbability: 0.5, 
+    radiationStormProbability: 0.35,
+    predictionConfidence: 0.7,
+    activityLevel: 'moderate'
+  },
+  { 
+    period: 'Jun 13, 2AM', 
+    kpIndex: 5.2, 
+    solarWindSpeed: 620, 
+    solarFlaresProbability: 0.45, 
+    geomagneticStormProbability: 0.6, 
+    radiationStormProbability: 0.4,
+    predictionConfidence: 0.65,
+    activityLevel: 'high'
+  },
+  { 
+    period: 'Jun 13, 6AM', 
+    kpIndex: 4.5, 
+    solarWindSpeed: 580, 
+    solarFlaresProbability: 0.35, 
+    geomagneticStormProbability: 0.45, 
+    radiationStormProbability: 0.3,
+    predictionConfidence: 0.6,
+    activityLevel: 'moderate'
+  },
+];
+
+const ForecastChart: React.FC<ForecastChartProps> = ({ 
+  data = mockForecastData,
+  className 
+}) => {
+  // Get the minimum and maximum values for the Kp Index to set the domain
+  const minKp = Math.floor(Math.min(...data.map(d => d.kpIndex)));
+  const maxKp = Math.ceil(Math.max(...data.map(d => d.kpIndex)));
+  
+  // Format the tooltip content
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="cosmos-tooltip p-2 rounded">
+          <p className="text-xs font-medium">{label}</p>
+          <div className="text-xs grid grid-cols-2 gap-x-3 gap-y-1 mt-1">
+            <span>Kp Index:</span>
+            <span className="font-medium">{data.kpIndex.toFixed(1)}</span>
+            
+            <span>Wind Speed:</span>
+            <span className="font-medium">{data.solarWindSpeed.toFixed(0)} km/s</span>
+            
+            <span>Flare Prob.:</span>
+            <span className="font-medium">{(data.solarFlaresProbability * 100).toFixed(0)}%</span>
+            
+            <span>Storm Prob.:</span>
+            <span className="font-medium">{(data.geomagneticStormProbability * 100).toFixed(0)}%</span>
+            
+            <span>Confidence:</span>
+            <span className="font-medium">{(data.predictionConfidence * 100).toFixed(0)}%</span>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <Card className={`cosmos-card ${className}`}>
-      <CardHeader className="pb-2 pt-4 px-6 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-lg font-medium">Geomagnetic Storm Forecast</CardTitle>
-        <span 
-          className={`px-2 py-1 text-xs font-medium rounded-full ${
-            severity === 'low' ? 'bg-alert-low/20 text-alert-low' : 
-            severity === 'moderate' ? 'bg-alert-moderate/20 text-alert-moderate' : 
-            'bg-alert-high/20 text-alert-high'
-          }`}
-        >
-          Max Kp: {maxKpIndex} at {maxKpTime}
-        </span>
+      <CardHeader className="px-6 pt-4 pb-2">
+        <CardTitle className="text-lg font-medium">48-Hour Forecast</CardTitle>
       </CardHeader>
-      <CardContent className="p-6 pt-4">
-        <div className="h-64 w-full">
+      <CardContent className="p-1">
+        <div className="pt-2 px-2 h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={forecastData}
-              margin={{ top: 10, right: 20, left: -10, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="kpIndex" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3d5afe" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#3d5afe" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="probability" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#d500f9" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#d500f9" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+            <LineChart data={data} margin={{ top: 10, right: 25, left: 5, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.15} />
               <XAxis 
-                dataKey="time" 
-                stroke="#888888" 
-                fontSize={12}
-                tickLine={false}
-                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                dataKey="period" 
+                tick={{ fontSize: 10 }} 
+                tickLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
+                axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
               />
               <YAxis 
-                yAxisId="kp"
-                stroke="#888888" 
-                fontSize={12}
-                tickLine={false}
-                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                tickFormatter={(value) => `${value}`}
-                domain={[0, 9]}
+                yAxisId="left"
+                domain={[minKp > 0 ? minKp - 1 : 0, maxKp + 1]} 
+                tick={{ fontSize: 10 }} 
+                tickLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
+                axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }} 
+                label={{ 
+                  value: 'Kp Index', 
+                  angle: -90, 
+                  position: 'insideLeft',
+                  style: { fontSize: 10, textAnchor: 'middle' },
+                  dy: 50
+                }}
               />
               <YAxis 
-                yAxisId="prob"
-                orientation="right"
-                stroke="#888888" 
-                fontSize={12}
-                tickLine={false}
-                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
-                tickFormatter={(value) => `${value * 100}%`}
+                yAxisId="right" 
+                orientation="right" 
                 domain={[0, 1]}
+                tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
+                tick={{ fontSize: 10 }} 
+                tickLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
+                axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
+                label={{ 
+                  value: 'Probability', 
+                  angle: 90, 
+                  position: 'insideRight',
+                  style: { fontSize: 10, textAnchor: 'middle' },
+                  dy: -30
+                }}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Area 
-                yAxisId="kp"
+              <Legend verticalAlign="top" height={30} />
+              <Line 
+                yAxisId="left"
                 type="monotone" 
                 dataKey="kpIndex" 
-                stroke="#3d5afe" 
-                fillOpacity={1}
-                fill="url(#kpIndex)" 
-                name="Kp Index"
+                name="Kp Index" 
+                stroke="#8884d8" 
+                strokeWidth={2}
+                dot={{ strokeWidth: 2, r: 3 }}
+                activeDot={{ r: 5 }}
               />
-              <Area 
-                yAxisId="prob"
+              <Line 
+                yAxisId="right"
                 type="monotone" 
-                dataKey="probability" 
-                stroke="#d500f9" 
-                fillOpacity={1}
-                fill="url(#probability)"
-                name="Storm Probability" 
+                dataKey="geomagneticStormProbability" 
+                name="G-Storm Prob." 
+                stroke="#ff7300"
+                strokeWidth={2} 
+                dot={{ strokeWidth: 2, r: 3 }}
               />
-            </AreaChart>
+              <Line 
+                yAxisId="right"
+                type="monotone" 
+                dataKey="solarFlaresProbability" 
+                name="Flare Prob." 
+                stroke="#82ca9d" 
+                strokeWidth={2}
+                dot={{ strokeWidth: 2, r: 3 }}
+              />
+            </LineChart>
           </ResponsiveContainer>
-        </div>
-        <div className="flex justify-between items-center mt-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-primary"></div>
-            <span>Kp-Index (0-9)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-accent"></div>
-            <span>Storm Probability</span>
-          </div>
         </div>
       </CardContent>
     </Card>

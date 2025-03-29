@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import Header from '@/components/Header';
 import SolarVisualization from '@/components/SolarVisualization';
-import ForecastChart from '@/components/ForecastChart';
+import ForecastChart, { ForecastDataPoint } from '@/components/ForecastChart';
 import SolarDataPanel from '@/components/SolarDataPanel';
 import AIPrediction from '@/components/AIPrediction';
 import Starfield from '@/components/Starfield';
@@ -19,6 +19,7 @@ const Index = () => {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [mlPrediction, setMlPrediction] = useState<any>(null);
+  const [forecastData, setForecastData] = useState<ForecastDataPoint[]>([]);
 
   useEffect(() => {
     // Initial data load from mock data (backup)
@@ -47,6 +48,25 @@ const Index = () => {
             processedData.magneticFieldBz
           );
           setMlPrediction(prediction);
+          
+          // Process forecast data for the chart
+          if (prediction && prediction.forecast) {
+            const chartData = prediction.forecast.map((point: any) => ({
+              period: new Date(point.time).toLocaleString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                hour: 'numeric'
+              }),
+              kpIndex: point.kpIndex,
+              solarWindSpeed: point.solarWindSpeed,
+              solarFlaresProbability: point.confidence * 0.3,
+              geomagneticStormProbability: point.geomagneticStormProbability,
+              radiationStormProbability: point.geomagneticStormProbability * 0.7,
+              predictionConfidence: point.confidence,
+              activityLevel: point.kpIndex >= 5 ? 'high' : point.kpIndex >= 3 ? 'moderate' : 'low'
+            }));
+            setForecastData(chartData);
+          }
           
           toast({
             title: "Data updated",
@@ -167,22 +187,7 @@ const Index = () => {
           
           {/* Right column */}
           <div className="lg:col-span-1 space-y-6">
-            <ForecastChart 
-              data={mlPrediction?.forecast?.map(point => ({
-                period: new Date(point.time).toLocaleString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric', 
-                  hour: 'numeric'
-                }),
-                kpIndex: point.kpIndex,
-                solarWindSpeed: point.solarWindSpeed,
-                solarFlaresProbability: point.confidence * 0.3,
-                geomagneticStormProbability: point.geomagneticStormProbability,
-                radiationStormProbability: point.geomagneticStormProbability * 0.7,
-                predictionConfidence: point.confidence,
-                activityLevel: point.kpIndex >= 5 ? 'high' : point.kpIndex >= 3 ? 'moderate' : 'low'
-              }))}
-            />
+            <ForecastChart data={forecastData} />
             
             <div className="cosmos-card p-4">
               <h3 className="text-lg font-medium mb-3">Recent Space Weather Events</h3>
