@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import Header from '@/components/Header';
@@ -51,20 +50,33 @@ const Index = () => {
           
           // Process forecast data for the chart
           if (prediction && prediction.forecast) {
-            const chartData = prediction.forecast.map((point: any) => ({
-              period: new Date(point.time).toLocaleString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                hour: 'numeric'
-              }),
-              kpIndex: point.kpIndex,
-              solarWindSpeed: point.solarWindSpeed,
-              solarFlaresProbability: point.confidence * 0.3,
-              geomagneticStormProbability: point.geomagneticStormProbability,
-              radiationStormProbability: point.geomagneticStormProbability * 0.7,
-              predictionConfidence: point.confidence,
-              activityLevel: point.kpIndex >= 5 ? 'high' : point.kpIndex >= 3 ? 'moderate' : 'low'
-            }));
+            const chartData = prediction.forecast.map((point: any) => {
+              // Determine activity level based on kpIndex
+              let activityLevel: 'low' | 'moderate' | 'high' | 'severe' = 'low';
+              if (point.kpIndex >= 7) {
+                activityLevel = 'severe';
+              } else if (point.kpIndex >= 5) {
+                activityLevel = 'high';
+              } else if (point.kpIndex >= 3) {
+                activityLevel = 'moderate';
+              }
+              
+              return {
+                period: new Date(point.time).toLocaleString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric', 
+                  hour: 'numeric'
+                }),
+                kpIndex: point.kpIndex,
+                solarWindSpeed: point.solarWindSpeed,
+                solarFlaresProbability: point.confidence * 0.3,
+                geomagneticStormProbability: point.geomagneticStormProbability,
+                radiationStormProbability: point.geomagneticStormProbability * 0.7,
+                predictionConfidence: point.confidence,
+                activityLevel
+              } as ForecastDataPoint;
+            });
+            
             setForecastData(chartData);
           }
           
@@ -79,7 +91,7 @@ const Index = () => {
         if (alertsData.length > 0) {
           const formattedAlerts = alertsData.slice(0, 4).map(alert => {
             // Determine severity level based on message content
-            let level = 'low';
+            let level: 'low' | 'moderate' | 'high' | 'severe' = 'low';
             if (alert.message.includes('WARNING')) level = 'high';
             else if (alert.message.includes('WATCH')) level = 'moderate';
             
