@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from "@/components/ui/use-toast";
 import Header from '@/components/Header';
 import SolarVisualization from '@/components/SolarVisualization';
 import ForecastChart from '@/components/ForecastChart';
@@ -7,21 +8,127 @@ import SolarDataPanel from '@/components/SolarDataPanel';
 import AIPrediction from '@/components/AIPrediction';
 import Starfield from '@/components/Starfield';
 import { SolarData, getCurrentSolarData, subscribeToSolarData } from '@/utils/spaceWeatherData';
+import { fetchSolarWindData, fetchSpaceWeatherAlerts, getMostRecentSolarWindData, processSolarWindData } from '@/services/solarDataService';
+import { predictSpaceWeather } from '@/services/mlModelService';
+import axios from 'axios';
 
 const Index = () => {
+  const { toast } = useToast();
   const [solarData, setSolarData] = useState<SolarData>(getCurrentSolarData());
+  const [realTimeData, setRealTimeData] = useState<SolarData | null>(null);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [mlPrediction, setMlPrediction] = useState<any>(null);
 
   useEffect(() => {
-    // Initial data load
+    // Initial data load from mock data (backup)
     setSolarData(getCurrentSolarData());
     
-    // Subscribe to updates
-    const unsubscribe = subscribeToSolarData((newData) => {
-      setSolarData(newData);
-    }, 15000); // Update every 15 seconds
+    // Load real-time data from NOAA API
+    const fetchRealTimeData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch solar wind data
+        const recentData = await getMostRecentSolarWindData();
+        const processedData = processSolarWindData(recentData);
+        
+        if (processedData) {
+          setSolarData({
+            ...solarData,
+            ...processedData
+          });
+          setRealTimeData(processedData);
+          
+          // Generate ML prediction based on current data
+          const prediction = predictSpaceWeather(
+            processedData.kpIndex,
+            processedData.solarWindSpeed,
+            processedData.magneticFieldBz
+          );
+          setMlPrediction(prediction);
+          
+          toast({
+            title: "Data updated",
+            description: "Real-time solar data has been loaded",
+          });
+        }
+        
+        // Fetch alerts
+        const alertsData = await fetchSpaceWeatherAlerts();
+        if (alertsData.length > 0) {
+          const formattedAlerts = alertsData.slice(0, 4).map(alert => {
+            // Determine severity level based on message content
+            let level = 'low';
+            if (alert.message.includes('WARNING')) level = 'high';
+            else if (alert.message.includes('WATCH')) level = 'moderate';
+            
+            // Format the time
+            const issueTime = new Date(alert.issueTime);
+            const timeAgo = getTimeAgo(issueTime);
+            
+            return {
+              time: timeAgo,
+              event: alert.message.split('\n')[0] || 'Space weather alert',
+              level
+            };
+          });
+          setAlerts(formattedAlerts);
+        }
+        
+      } catch (error) {
+        console.error('Error loading real-time data:', error);
+        toast({
+          variant: "destructive",
+          title: "Error loading data",
+          description: "Could not load real-time data. Using backup data instead.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    return () => unsubscribe();
+    // Initial fetch
+    fetchRealTimeData();
+    
+    // Subscribe to periodic updates (every 5 minutes)
+    const intervalId = setInterval(fetchRealTimeData, 5 * 60 * 1000);
+    
+    // Backup data subscription
+    const unsubscribe = subscribeToSolarData((newData) => {
+      // Only use if we don't have real data
+      if (!realTimeData) {
+        setSolarData(newData);
+      }
+    }, 30000);
+    
+    return () => {
+      clearInterval(intervalId);
+      unsubscribe();
+    };
   }, []);
+
+  // Helper function to format time ago
+  const getTimeAgo = (date: Date): string => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + ' years ago';
+    
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + ' months ago';
+    
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + ' days ago';
+    
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + ' hours ago';
+    
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + ' minutes ago';
+    
+    return Math.floor(seconds) + ' seconds ago';
+  };
 
   return (
     <div className="min-h-screen space-gradient">
@@ -38,7 +145,21 @@ const Index = () => {
                 className="md:col-span-1" 
                 solarActivityLevel={solarData.activityLevel}
               />
-              <AIPrediction className="md:col-span-1" />
+              <AIPrediction
+                className="md:col-span-1"
+                data={mlPrediction ? {
+                  timestamp: new Date().toISOString(),
+                  prediction: `${mlPrediction.summarizedRisk.toUpperCase()} geomagnetic activity in the next 24-48 hours`,
+                  confidence: mlPrediction.confidence,
+                  analysisFactors: [
+                    `Current Kp index: ${solarData.kpIndex.toFixed(1)}`,
+                    `Solar wind speed: ${solarData.solarWindSpeed.toFixed(0)} km/s`,
+                    `Magnetic field Bz: ${solarData.magneticFieldBz.toFixed(1)} nT`,
+                    "CNN-LSTM neural network prediction"
+                  ],
+                  riskLevel: mlPrediction.summarizedRisk
+                } : undefined}
+              />
             </div>
             
             <SolarDataPanel data={solarData} />
@@ -46,17 +167,32 @@ const Index = () => {
           
           {/* Right column */}
           <div className="lg:col-span-1 space-y-6">
-            <ForecastChart />
+            <ForecastChart 
+              data={mlPrediction?.forecast?.map(point => ({
+                period: new Date(point.time).toLocaleString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric', 
+                  hour: 'numeric'
+                }),
+                kpIndex: point.kpIndex,
+                solarWindSpeed: point.solarWindSpeed,
+                solarFlaresProbability: point.confidence * 0.3,
+                geomagneticStormProbability: point.geomagneticStormProbability,
+                radiationStormProbability: point.geomagneticStormProbability * 0.7,
+                predictionConfidence: point.confidence,
+                activityLevel: point.kpIndex >= 5 ? 'high' : point.kpIndex >= 3 ? 'moderate' : 'low'
+              }))}
+            />
             
             <div className="cosmos-card p-4">
               <h3 className="text-lg font-medium mb-3">Recent Space Weather Events</h3>
               <div className="space-y-3">
-                {[
+                {(alerts.length > 0 ? alerts : [
                   { time: '2 hours ago', event: 'C3.2 class solar flare detected on the eastern limb', level: 'low' },
                   { time: '6 hours ago', event: 'Increased solar wind speed (580 km/s) from coronal hole', level: 'moderate' },
                   { time: '1 day ago', event: 'Southward turning of IMF Bz (-8.5 nT)', level: 'moderate' },
                   { time: '2 days ago', event: 'M1.5 class solar flare with radio blackout', level: 'high' }
-                ].map((item, idx) => (
+                ]).map((item, idx) => (
                   <div key={idx} className="glass-panel p-3 flex items-start gap-3">
                     <div className={`w-2 h-2 rounded-full mt-1.5 ${
                       item.level === 'low' ? 'bg-alert-low' : 
