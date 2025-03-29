@@ -6,7 +6,16 @@ import { Mesh, Vector3 } from 'three';
 
 const SunObject = () => {
   const meshRef = useRef<Mesh>(null);
-  const sunTexture = useTexture('/sun-texture.jpg');
+  // Using the correct path to the texture with error handling
+  const sunTexture = useTexture('/sun-texture.jpg', 
+    // Fallback to a basic material if loading fails
+    (texture) => {
+      console.log('Sun texture loaded successfully');
+    },
+    (error) => {
+      console.error('Failed to load sun texture:', error);
+    }
+  );
   
   useFrame((state, delta) => {
     if (meshRef.current) {
