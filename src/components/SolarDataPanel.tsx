@@ -33,8 +33,16 @@ const SolarDataPanel: React.FC<SolarDataPanelProps> = ({
   };
   
   const getFormattedTime = (timestamp: string) => {
+    if (!timestamp) return 'Unknown';
     const date = new Date(timestamp);
     return date.toLocaleString();
+  };
+  
+  // Safely render values with null checks to prevent "cannot read property of undefined" errors
+  const renderSafeValue = (value: any, decimals: number = 1, unit: string = ''): string => {
+    if (value === undefined || value === null) return 'N/A';
+    if (typeof value === 'number') return `${value.toFixed(decimals)}${unit}`;
+    return String(value);
   };
 
   return (
@@ -44,7 +52,7 @@ const SolarDataPanel: React.FC<SolarDataPanelProps> = ({
           <div className="flex justify-between items-center">
             <CardTitle className="text-lg font-medium">Solar Activity Parameters</CardTitle>
             <span className="text-xs text-muted-foreground">
-              Last Updated: {getFormattedTime(data.timestamp)}
+              Last Updated: {getFormattedTime(data?.timestamp || '')}
             </span>
           </div>
         </CardHeader>
@@ -52,9 +60,9 @@ const SolarDataPanel: React.FC<SolarDataPanelProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <MetricCard
               title="Solar Wind Speed"
-              value={`${Math.round(data.solarWindSpeed)} km/s`}
+              value={data?.solarWindSpeed ? `${Math.round(data.solarWindSpeed)} km/s` : 'N/A'}
               description="Current solar wind velocity"
-              status={getSolarWindStatus(data.solarWindSpeed)}
+              status={data?.solarWindSpeed ? getSolarWindStatus(data.solarWindSpeed) : 'low'}
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-solar">
                   <path d="M17.45 2.88a9 9 0 1 0 9.82 14.58"/>
@@ -66,9 +74,9 @@ const SolarDataPanel: React.FC<SolarDataPanelProps> = ({
             
             <MetricCard
               title="Particle Density"
-              value={`${data.solarWindDensity.toFixed(1)} p/cm³`}
+              value={data?.solarWindDensity !== undefined ? `${renderSafeValue(data.solarWindDensity, 1)} p/cm³` : 'N/A'}
               description="Solar wind plasma density"
-              status={data.solarWindDensity > 8 ? 'moderate' : 'low'}
+              status={data?.solarWindDensity !== undefined ? (data.solarWindDensity > 8 ? 'moderate' : 'low') : 'low'}
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cosmic-radiation">
                   <path d="M20.2 2H3.8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h16.4a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z"/>
@@ -81,10 +89,10 @@ const SolarDataPanel: React.FC<SolarDataPanelProps> = ({
             
             <MetricCard
               title="Magnetic Field Bz"
-              value={`${data.magneticFieldBz.toFixed(1)} nT`}
+              value={data?.magneticFieldBz !== undefined ? `${renderSafeValue(data.magneticFieldBz, 1)} nT` : 'N/A'}
               description="North-south IMF component"
-              status={getMagneticFieldStatus(data.magneticFieldBz)}
-              trend={data.magneticFieldBz < -2 ? 'down' : 'stable'}
+              status={data?.magneticFieldBz !== undefined ? getMagneticFieldStatus(data.magneticFieldBz) : 'low'}
+              trend={data?.magneticFieldBz !== undefined ? (data.magneticFieldBz < -2 ? 'down' : 'stable') : undefined}
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cosmic-storm">
                   <path d="M12 2v8"/>
@@ -101,9 +109,9 @@ const SolarDataPanel: React.FC<SolarDataPanelProps> = ({
             
             <MetricCard
               title="X-Ray Flux"
-              value={data.xRayFlux.toExponential(1)}
+              value={data?.xRayFlux !== undefined ? renderSafeValue(data.xRayFlux, null, '') : 'N/A'}
               description="Solar X-ray emission level"
-              status={getXRayStatus(data.xRayFlux)}
+              status={data?.xRayFlux !== undefined ? getXRayStatus(data.xRayFlux) : 'low'}
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-solar-active">
                   <path d="m8 18 4-14 4 14"/>
@@ -115,9 +123,9 @@ const SolarDataPanel: React.FC<SolarDataPanelProps> = ({
             
             <MetricCard
               title="Kp Index"
-              value={data.kpIndex.toFixed(1)}
+              value={data?.kpIndex !== undefined ? renderSafeValue(data.kpIndex, 1) : 'N/A'}
               description="Geomagnetic activity (0-9)"
-              status={data.activityLevel}
+              status={data?.activityLevel || 'low'}
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-alert-moderate">
                   <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/>
@@ -130,9 +138,9 @@ const SolarDataPanel: React.FC<SolarDataPanelProps> = ({
             
             <MetricCard
               title="Activity Level"
-              value={data.activityLevel.toUpperCase()}
+              value={data?.activityLevel ? data.activityLevel.toUpperCase() : 'N/A'}
               description="Overall space weather status"
-              status={data.activityLevel}
+              status={data?.activityLevel || 'low'}
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-alert-moderate">
                   <path d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86L7.86 2"/>
