@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import Header from '@/components/Header';
@@ -87,25 +88,30 @@ const Index = () => {
         }
         
         // Fetch alerts
-        const alertsData = await fetchSpaceWeatherAlerts();
-        if (alertsData.length > 0) {
-          const formattedAlerts = alertsData.slice(0, 4).map(alert => {
-            // Determine severity level based on message content
-            let level: 'low' | 'moderate' | 'high' | 'severe' = 'low';
-            if (alert.message.includes('WARNING')) level = 'high';
-            else if (alert.message.includes('WATCH')) level = 'moderate';
-            
-            // Format the time
-            const issueTime = new Date(alert.issueTime);
-            const timeAgo = getTimeAgo(issueTime);
-            
-            return {
-              time: timeAgo,
-              event: alert.message.split('\n')[0] || 'Space weather alert',
-              level
-            };
-          });
-          setAlerts(formattedAlerts);
+        try {
+          const alertsData = await fetchSpaceWeatherAlerts();
+          if (alertsData && alertsData.length > 0) {
+            const formattedAlerts = alertsData.slice(0, 4).map(alert => {
+              // Determine severity level based on message content
+              let level: 'low' | 'moderate' | 'high' | 'severe' = 'low';
+              if (alert.message && alert.message.includes('WARNING')) level = 'high';
+              else if (alert.message && alert.message.includes('WATCH')) level = 'moderate';
+              
+              // Format the time
+              const issueTime = new Date(alert.issueTime || new Date());
+              const timeAgo = getTimeAgo(issueTime);
+              
+              return {
+                time: timeAgo,
+                event: alert.message ? (alert.message.split('\n')[0] || 'Space weather alert') : 'Space weather alert',
+                level
+              };
+            });
+            setAlerts(formattedAlerts);
+          }
+        } catch (alertError) {
+          console.error('Error fetching space weather alerts:', alertError);
+          // Continue with the app even if alerts fail to load
         }
         
       } catch (error) {
@@ -162,6 +168,13 @@ const Index = () => {
     return Math.floor(seconds) + ' seconds ago';
   };
 
+  // Safely render values with null checks to prevent "cannot read property of undefined" errors
+  const renderSafeValue = (value: any, decimals: number = 1): string => {
+    if (value === undefined || value === null) return 'N/A';
+    if (typeof value === 'number') return value.toFixed(decimals);
+    return String(value);
+  };
+
   return (
     <div className="min-h-screen space-gradient">
       <Starfield />
@@ -175,21 +188,21 @@ const Index = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <SolarVisualization 
                 className="md:col-span-1" 
-                solarActivityLevel={solarData.activityLevel}
+                solarActivityLevel={solarData.activityLevel || 'moderate'}
               />
               <AIPrediction
                 className="md:col-span-1"
                 data={mlPrediction ? {
                   timestamp: new Date().toISOString(),
-                  prediction: `${mlPrediction.summarizedRisk.toUpperCase()} geomagnetic activity in the next 24-48 hours`,
-                  confidence: mlPrediction.confidence,
+                  prediction: `${mlPrediction.summarizedRisk?.toUpperCase() || 'MODERATE'} geomagnetic activity in the next 24-48 hours`,
+                  confidence: mlPrediction.confidence || 0.65,
                   analysisFactors: [
-                    `Current Kp index: ${solarData.kpIndex.toFixed(1)}`,
-                    `Solar wind speed: ${solarData.solarWindSpeed.toFixed(0)} km/s`,
-                    `Magnetic field Bz: ${solarData.magneticFieldBz.toFixed(1)} nT`,
+                    `Current Kp index: ${solarData.kpIndex ? renderSafeValue(solarData.kpIndex) : 'N/A'}`,
+                    `Solar wind speed: ${solarData.solarWindSpeed ? renderSafeValue(solarData.solarWindSpeed, 0) : 'N/A'} km/s`,
+                    `Magnetic field Bz: ${solarData.magneticFieldBz ? renderSafeValue(solarData.magneticFieldBz) : 'N/A'} nT`,
                     "CNN-LSTM neural network prediction"
                   ],
-                  riskLevel: mlPrediction.summarizedRisk
+                  riskLevel: mlPrediction.summarizedRisk || 'moderate'
                 } : undefined}
               />
             </div>
