@@ -27,6 +27,7 @@ const Index = () => {
   const [modelLoading, setModelLoading] = useState<boolean>(false);
   const [dataRefreshTime, setDataRefreshTime] = useState<Date>(new Date());
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   // Helper function to format time ago
   const getTimeAgo = (date: Date): string => {
@@ -111,7 +112,14 @@ const Index = () => {
 
   // Function to fetch real-time data
   const fetchRealTimeData = useCallback(async () => {
+    // Prevent multiple simultaneous refreshes
+    if (isRefreshing) {
+      console.log('Data refresh already in progress, skipping this request');
+      return;
+    }
+
     try {
+      setIsRefreshing(true);
       setLoading(true);
       
       // Fetch solar wind data
@@ -174,7 +182,8 @@ const Index = () => {
           
           // Play alert sound if there's a high severity alert
           if (isSoundEnabled && formattedAlerts.some(alert => {
-            return alert.level === 'high' || alert.level === 'severe';
+            // Use string literal comparison to avoid TypeScript errors
+            return alert.level === 'high' || alert.level === 'severe' as AlertLevel;
           })) {
             playNotificationSound('alert');
           }
@@ -193,8 +202,9 @@ const Index = () => {
       );
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  }, [solarData, showNotification, processForecastData, isSoundEnabled]);
+  }, [solarData, showNotification, processForecastData, isSoundEnabled, isRefreshing]);
 
   // Toggle sound
   const toggleSound = () => {
@@ -209,8 +219,8 @@ const Index = () => {
     // Initial fetch
     fetchRealTimeData();
     
-    // Subscribe to periodic updates (every 5 minutes)
-    const intervalId = setInterval(fetchRealTimeData, 5 * 60 * 1000);
+    // Subscribe to periodic updates (every 15 minutes instead of 5)
+    const intervalId = setInterval(fetchRealTimeData, 15 * 60 * 1000);
     
     // Backup data subscription
     const unsubscribe = subscribeToSolarData((newData) => {
@@ -218,7 +228,7 @@ const Index = () => {
       if (!realTimeData) {
         setSolarData(newData);
       }
-    }, 30000);
+    }, 60000); // Slowed down from 30000ms to 60000ms
     
     // Welcome notification with sound
     setTimeout(() => {
@@ -226,13 +236,20 @@ const Index = () => {
         "Welcome to Cosmic Forecast Protocol",
         "Using CNN-LSTM neural network for space weather prediction"
       );
-    }, 1000);
+    }, 2000); // Delayed welcome message to avoid overlap
     
     return () => {
       clearInterval(intervalId);
       unsubscribe();
     };
   }, [fetchRealTimeData, realTimeData, showNotification]);
+
+  // Add data source information for display
+  const dataSourceInfo = {
+    real: "NOAA SWPC and NASA DONKI APIs with fallback to synthetic data",
+    algorithm: "CNN-LSTM (Convolutional Neural Network-Long Short Term Memory) hybrid model",
+    refreshInterval: "Every 15 minutes"
+  };
 
   return (
     <div className="min-h-screen space-gradient">
@@ -272,6 +289,9 @@ const Index = () => {
               <div className="text-xs text-muted-foreground">
                 Last data refresh: {dataRefreshTime.toLocaleString()}
               </div>
+              <div className="text-xs flex items-center justify-center gap-1.5 text-muted-foreground">
+                <span>Data: {realTimeData ? "Live API" : "Synthetic"}</span>
+              </div>
               <button 
                 onClick={toggleSound}
                 className="text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
@@ -306,7 +326,7 @@ const Index = () => {
               </button>
               <button 
                 onClick={fetchRealTimeData} 
-                disabled={loading}
+                disabled={loading || isRefreshing}
                 className="text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
               >
                 <svg 
@@ -362,6 +382,24 @@ const Index = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+            
+            <div className="cosmos-card p-4">
+              <h3 className="text-lg font-medium mb-2">Data Sources & Model</h3>
+              <div className="space-y-2">
+                <div className="glass-panel p-3">
+                  <p className="text-sm font-medium">Data Source</p>
+                  <p className="text-xs text-muted-foreground">{dataSourceInfo.real}</p>
+                </div>
+                <div className="glass-panel p-3">
+                  <p className="text-sm font-medium">Algorithm</p>
+                  <p className="text-xs text-muted-foreground">{dataSourceInfo.algorithm}</p>
+                </div>
+                <div className="glass-panel p-3">
+                  <p className="text-sm font-medium">Refresh Interval</p>
+                  <p className="text-xs text-muted-foreground">{dataSourceInfo.refreshInterval}</p>
+                </div>
               </div>
             </div>
             
