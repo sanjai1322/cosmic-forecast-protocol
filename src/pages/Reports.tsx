@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import Header from '@/components/Header';
@@ -8,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getCurrentSolarData, getSpaceWeatherForecast } from '@/utils/spaceWeatherData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchSpaceWeatherAlerts } from '@/services/solarDataService';
+import MLModelInfo from '@/components/MLModelInfo';
 
 const Reports = () => {
   const { toast } = useToast();
@@ -15,6 +15,7 @@ const Reports = () => {
   const forecastData = getSpaceWeatherForecast();
   const [alerts, setAlerts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [activeTab, setActiveTab] = React.useState('alerts');
   
   // Load alerts
   React.useEffect(() => {
@@ -89,11 +90,12 @@ const Reports = () => {
             </p>
           </div>
           
-          <Tabs defaultValue="alerts">
-            <TabsList className="grid grid-cols-3 mb-6">
+          <Tabs defaultValue="alerts" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid grid-cols-4 mb-6">
               <TabsTrigger value="alerts">Alerts & Warnings</TabsTrigger>
               <TabsTrigger value="forecasts">Forecasts</TabsTrigger>
               <TabsTrigger value="historical">Historical Data</TabsTrigger>
+              <TabsTrigger value="model">CNN-LSTM Model</TabsTrigger>
             </TabsList>
             
             <TabsContent value="alerts" className="space-y-6">
@@ -368,6 +370,88 @@ const Reports = () => {
                   </Table>
                 </CardContent>
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="model" className="space-y-6">
+              <MLModelInfo />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>CNN-LSTM Technical Architecture</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="bg-card/50 p-4 rounded-lg border border-border/40 text-sm">
+                        <h4 className="font-medium mb-2">Network Structure</h4>
+                        <ul className="space-y-2">
+                          <li><span className="font-mono text-solar">Input Layer:</span> Shape=[24, 5] (24 time steps, 5 features)</li>
+                          <li><span className="font-mono text-solar">Conv1D:</span> 64 filters, kernel size 3, ReLU activation</li>
+                          <li><span className="font-mono text-solar">LSTM Layer:</span> 50 units, tanh activation</li>
+                          <li><span className="font-mono text-solar">Dense Layer:</span> 32 units, ReLU activation</li>
+                          <li><span className="font-mono text-solar">Output Layer:</span> 5 units (predictions)</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="bg-card/50 p-4 rounded-lg border border-border/40 text-sm">
+                        <h4 className="font-medium mb-2">Training Configuration</h4>
+                        <ul className="space-y-1">
+                          <li><span className="font-medium">Optimizer:</span> Adam (learning rate: 0.001)</li>
+                          <li><span className="font-medium">Loss Function:</span> Mean Squared Error</li>
+                          <li><span className="font-medium">Epochs:</span> 100</li>
+                          <li><span className="font-medium">Batch Size:</span> 32</li>
+                          <li><span className="font-medium">Validation Split:</span> 20%</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Model Training & Validation</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Training Dataset</h4>
+                        <p className="text-sm text-muted-foreground">
+                          The model was trained on 10 years of historical solar and geomagnetic data
+                          (2012-2022), including solar cycles 24 and 25. Training data includes:
+                        </p>
+                        <ul className="text-xs mt-2 space-y-1">
+                          <li>• 15-minute resolution solar wind parameters from DSCOVR</li>
+                          <li>• 3-hour Kp indices from global magnetometer network</li>
+                          <li>• X-ray flux measurements from GOES satellites</li>
+                          <li>• CME catalogs from SOHO/LASCO</li>
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Validation Methods</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Model performance was validated using:
+                        </p>
+                        <ul className="text-xs mt-2 space-y-1">
+                          <li>• K-fold cross-validation (k=5)</li>
+                          <li>• Out-of-sample testing on 2022-2023 data</li>
+                          <li>• Comparison with traditional physics-based models</li>
+                          <li>• Backtesting against historical extreme events</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="bg-card/50 p-3 rounded-lg border border-border/40">
+                        <h4 className="font-medium text-xs mb-2">REAL-TIME INFERENCE</h4>
+                        <p className="text-xs">
+                          The model runs inferences every 15 minutes using the latest 
+                          available data from NOAA SWPC and NASA DONKI APIs, with predictions 
+                          updated on a rolling basis.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
         </div>

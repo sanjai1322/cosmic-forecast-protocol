@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import Header from '@/components/Header';
@@ -10,7 +9,6 @@ import Starfield from '@/components/Starfield';
 import { SolarData, getCurrentSolarData, subscribeToSolarData } from '@/utils/spaceWeatherData';
 import { fetchSolarWindData, fetchSpaceWeatherAlerts, getMostRecentSolarWindData, processSolarWindData } from '@/services/solarDataService';
 import { predictSpaceWeather } from '@/services/mlModelService';
-import axios from 'axios';
 
 const Index = () => {
   const { toast } = useToast();
@@ -20,6 +18,36 @@ const Index = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [mlPrediction, setMlPrediction] = useState<any>(null);
   const [forecastData, setForecastData] = useState<ForecastDataPoint[]>([]);
+  const [modelLoading, setModelLoading] = useState<boolean>(false);
+
+  // Helper function to format time ago
+  const getTimeAgo = (date: Date): string => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + ' years ago';
+    
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + ' months ago';
+    
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + ' days ago';
+    
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + ' hours ago';
+    
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + ' minutes ago';
+    
+    return Math.floor(seconds) + ' seconds ago';
+  };
+
+  // Safely render values with null checks to prevent "cannot read property of undefined" errors
+  const renderSafeValue = (value: any, decimals: number = 1): string => {
+    if (value === undefined || value === null) return 'N/A';
+    if (typeof value === 'number') return value.toFixed(decimals);
+    return String(value);
+  };
 
   useEffect(() => {
     // Initial data load from mock data (backup)
@@ -42,12 +70,14 @@ const Index = () => {
           setRealTimeData(processedData);
           
           // Generate ML prediction based on current data
-          const prediction = predictSpaceWeather(
+          setModelLoading(true);
+          const prediction = await predictSpaceWeather(
             processedData.kpIndex,
             processedData.solarWindSpeed,
             processedData.magneticFieldBz
           );
           setMlPrediction(prediction);
+          setModelLoading(false);
           
           // Process forecast data for the chart
           if (prediction && prediction.forecast) {
@@ -146,35 +176,6 @@ const Index = () => {
     };
   }, []);
 
-  // Helper function to format time ago
-  const getTimeAgo = (date: Date): string => {
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-    
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + ' years ago';
-    
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + ' months ago';
-    
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + ' days ago';
-    
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + ' hours ago';
-    
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + ' minutes ago';
-    
-    return Math.floor(seconds) + ' seconds ago';
-  };
-
-  // Safely render values with null checks to prevent "cannot read property of undefined" errors
-  const renderSafeValue = (value: any, decimals: number = 1): string => {
-    if (value === undefined || value === null) return 'N/A';
-    if (typeof value === 'number') return value.toFixed(decimals);
-    return String(value);
-  };
-
   return (
     <div className="min-h-screen space-gradient">
       <Starfield />
@@ -212,7 +213,16 @@ const Index = () => {
           
           {/* Right column */}
           <div className="lg:col-span-1 space-y-6">
-            <ForecastChart data={forecastData} />
+            {modelLoading ? (
+              <div className="cosmos-card p-4 flex items-center justify-center h-[300px]">
+                <div className="flex flex-col items-center">
+                  <div className="h-8 w-8 rounded-full border-4 border-t-solar border-r-solar/30 border-b-solar/10 border-l-solar/30 animate-spin mb-3"></div>
+                  <p className="text-sm">Loading CNN-LSTM Model...</p>
+                </div>
+              </div>
+            ) : (
+              <ForecastChart data={forecastData} />
+            )}
             
             <div className="cosmos-card p-4">
               <h3 className="text-lg font-medium mb-3">Recent Space Weather Events</h3>
