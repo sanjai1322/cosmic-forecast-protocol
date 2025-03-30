@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import Header from '@/components/Header';
@@ -171,8 +170,10 @@ const Index = () => {
           
           // Play alert sound if there's a high severity alert
           // Fixed the type comparison error by explicitly checking for the literal string values
-          if (isSoundEnabled && formattedAlerts.some(alert => 
-              alert.level === 'high' || alert.level === 'severe')) {
+          if (isSoundEnabled && formattedAlerts.some(alert => {
+            const level = alert.level;
+            return level === 'high' || level === 'severe';
+          })) {
             playNotificationSound('alert');
           }
         }
