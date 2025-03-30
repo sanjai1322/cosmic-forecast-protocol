@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import Header from '@/components/Header';
@@ -11,6 +12,9 @@ import { fetchSolarWindData, fetchSpaceWeatherAlerts, getMostRecentSolarWindData
 import { predictSpaceWeather } from '@/services/mlModelService';
 import { playNotificationSound, playActivityLevelSound } from '@/services/notificationService';
 import MLModelInfo from '@/components/MLModelInfo';
+
+// Define alert level type to ensure consistency
+type AlertLevel = 'low' | 'moderate' | 'high' | 'severe';
 
 const Index = () => {
   const { toast } = useToast();
@@ -152,7 +156,7 @@ const Index = () => {
         if (alertsData && alertsData.length > 0) {
           const formattedAlerts = alertsData.slice(0, 4).map(alert => {
             // Determine severity level based on message content
-            let level: 'low' | 'moderate' | 'high' | 'severe' = 'low';
+            let level: AlertLevel = 'low';
             if (alert.message && alert.message.includes('WARNING')) level = 'high';
             else if (alert.message && alert.message.includes('WATCH')) level = 'moderate';
             
@@ -169,10 +173,8 @@ const Index = () => {
           setAlerts(formattedAlerts);
           
           // Play alert sound if there's a high severity alert
-          // Fixed the type comparison error by explicitly checking for the literal string values
           if (isSoundEnabled && formattedAlerts.some(alert => {
-            const level = alert.level;
-            return level === 'high' || level === 'severe';
+            return alert.level === 'high' || alert.level === 'severe';
           })) {
             playNotificationSound('alert');
           }
