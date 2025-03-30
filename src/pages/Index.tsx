@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import Header from '@/components/Header';
 import SolarVisualization from '@/components/SolarVisualization';
@@ -9,6 +10,8 @@ import Starfield from '@/components/Starfield';
 import { SolarData, getCurrentSolarData, subscribeToSolarData } from '@/utils/spaceWeatherData';
 import { fetchSolarWindData, fetchSpaceWeatherAlerts, getMostRecentSolarWindData, processSolarWindData } from '@/services/solarDataService';
 import { predictSpaceWeather } from '@/services/mlModelService';
+import { playNotificationSound, playActivityLevelSound } from '@/services/notificationService';
+import MLModelInfo from '@/components/MLModelInfo';
 
 const Index = () => {
   const { toast } = useToast();
@@ -19,6 +22,8 @@ const Index = () => {
   const [mlPrediction, setMlPrediction] = useState<any>(null);
   const [forecastData, setForecastData] = useState<ForecastDataPoint[]>([]);
   const [modelLoading, setModelLoading] = useState<boolean>(false);
+  const [dataRefreshTime, setDataRefreshTime] = useState<Date>(new Date());
+  const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
 
   // Helper function to format time ago
   const getTimeAgo = (date: Date): string => {
@@ -48,114 +53,154 @@ const Index = () => {
     if (typeof value === 'number') return value.toFixed(decimals);
     return String(value);
   };
-
-  useEffect(() => {
-    // Initial data load from mock data (backup)
-    setSolarData(getCurrentSolarData());
+  
+  // Function to show toast notifications with sound
+  const showNotification = useCallback((title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
+    toast({
+      title,
+      description,
+      variant,
+    });
     
-    // Load real-time data from NOAA API
-    const fetchRealTimeData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch solar wind data
-        const recentData = await getMostRecentSolarWindData();
-        const processedData = processSolarWindData(recentData);
-        
-        if (processedData) {
-          setSolarData({
-            ...solarData,
-            ...processedData
-          });
-          setRealTimeData(processedData);
-          
-          // Generate ML prediction based on current data
-          setModelLoading(true);
-          const prediction = await predictSpaceWeather(
-            processedData.kpIndex,
-            processedData.solarWindSpeed,
-            processedData.magneticFieldBz
-          );
-          setMlPrediction(prediction);
-          setModelLoading(false);
-          
-          // Process forecast data for the chart
-          if (prediction && prediction.forecast) {
-            const chartData = prediction.forecast.map((point: any) => {
-              // Determine activity level based on kpIndex
-              let activityLevel: 'low' | 'moderate' | 'high' | 'severe' = 'low';
-              if (point.kpIndex >= 7) {
-                activityLevel = 'severe';
-              } else if (point.kpIndex >= 5) {
-                activityLevel = 'high';
-              } else if (point.kpIndex >= 3) {
-                activityLevel = 'moderate';
-              }
-              
-              return {
-                period: new Date(point.time).toLocaleString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric', 
-                  hour: 'numeric'
-                }),
-                kpIndex: point.kpIndex,
-                solarWindSpeed: point.solarWindSpeed,
-                solarFlaresProbability: point.confidence * 0.3,
-                geomagneticStormProbability: point.geomagneticStormProbability,
-                radiationStormProbability: point.geomagneticStormProbability * 0.7,
-                predictionConfidence: point.confidence,
-                activityLevel
-              } as ForecastDataPoint;
-            });
-            
-            setForecastData(chartData);
-          }
-          
-          toast({
-            title: "Data updated",
-            description: "Real-time solar data has been loaded",
-          });
-        }
-        
-        // Fetch alerts
-        try {
-          const alertsData = await fetchSpaceWeatherAlerts();
-          if (alertsData && alertsData.length > 0) {
-            const formattedAlerts = alertsData.slice(0, 4).map(alert => {
-              // Determine severity level based on message content
-              let level: 'low' | 'moderate' | 'high' | 'severe' = 'low';
-              if (alert.message && alert.message.includes('WARNING')) level = 'high';
-              else if (alert.message && alert.message.includes('WATCH')) level = 'moderate';
-              
-              // Format the time
-              const issueTime = new Date(alert.issueTime || new Date());
-              const timeAgo = getTimeAgo(issueTime);
-              
-              return {
-                time: timeAgo,
-                event: alert.message ? (alert.message.split('\n')[0] || 'Space weather alert') : 'Space weather alert',
-                level
-              };
-            });
-            setAlerts(formattedAlerts);
-          }
-        } catch (alertError) {
-          console.error('Error fetching space weather alerts:', alertError);
-          // Continue with the app even if alerts fail to load
-        }
-        
-      } catch (error) {
-        console.error('Error loading real-time data:', error);
-        toast({
-          variant: "destructive",
-          title: "Error loading data",
-          description: "Could not load real-time data. Using backup data instead.",
-        });
-      } finally {
-        setLoading(false);
+    // Play corresponding sound based on notification type
+    if (isSoundEnabled) {
+      if (variant === 'destructive') {
+        playNotificationSound('error');
+      } else {
+        playNotificationSound('info');
       }
-    };
-    
+    }
+  }, [toast, isSoundEnabled]);
+
+  // Function to fetch and process forecast data
+  const processForecastData = useCallback((prediction: any) => {
+    if (prediction && prediction.forecast) {
+      const chartData = prediction.forecast.map((point: any) => {
+        // Determine activity level based on kpIndex
+        let activityLevel: 'low' | 'moderate' | 'high' | 'severe' = 'low';
+        if (point.kpIndex >= 7) {
+          activityLevel = 'severe';
+        } else if (point.kpIndex >= 5) {
+          activityLevel = 'high';
+        } else if (point.kpIndex >= 3) {
+          activityLevel = 'moderate';
+        }
+        
+        return {
+          period: new Date(point.time).toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: 'numeric'
+          }),
+          kpIndex: point.kpIndex,
+          solarWindSpeed: point.solarWindSpeed,
+          solarFlaresProbability: point.confidence * 0.3,
+          geomagneticStormProbability: point.geomagneticStormProbability,
+          radiationStormProbability: point.geomagneticStormProbability * 0.7,
+          predictionConfidence: point.confidence,
+          activityLevel
+        } as ForecastDataPoint;
+      });
+      
+      setForecastData(chartData);
+    }
+  }, []);
+
+  // Function to fetch real-time data
+  const fetchRealTimeData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch solar wind data
+      const recentData = await getMostRecentSolarWindData();
+      const processedData = processSolarWindData(recentData);
+      
+      if (processedData) {
+        setSolarData({
+          ...solarData,
+          ...processedData
+        });
+        setRealTimeData(processedData);
+        setDataRefreshTime(new Date());
+        
+        // Play sound based on activity level if it changed
+        if (isSoundEnabled && solarData.activityLevel !== processedData.activityLevel) {
+          playActivityLevelSound(processedData.activityLevel);
+        }
+        
+        // Generate ML prediction based on current data
+        setModelLoading(true);
+        const prediction = await predictSpaceWeather(
+          processedData.kpIndex,
+          processedData.solarWindSpeed,
+          processedData.magneticFieldBz
+        );
+        setMlPrediction(prediction);
+        setModelLoading(false);
+        
+        // Process forecast data for the chart
+        processForecastData(prediction);
+        
+        showNotification(
+          "Data updated",
+          "Real-time solar data has been loaded",
+        );
+      }
+      
+      // Fetch alerts
+      try {
+        const alertsData = await fetchSpaceWeatherAlerts();
+        if (alertsData && alertsData.length > 0) {
+          const formattedAlerts = alertsData.slice(0, 4).map(alert => {
+            // Determine severity level based on message content
+            let level: 'low' | 'moderate' | 'high' | 'severe' = 'low';
+            if (alert.message && alert.message.includes('WARNING')) level = 'high';
+            else if (alert.message && alert.message.includes('WATCH')) level = 'moderate';
+            
+            // Format the time
+            const issueTime = new Date(alert.issueTime || new Date());
+            const timeAgo = getTimeAgo(issueTime);
+            
+            return {
+              time: timeAgo,
+              event: alert.message ? (alert.message.split('\n')[0] || 'Space weather alert') : 'Space weather alert',
+              level
+            };
+          });
+          setAlerts(formattedAlerts);
+          
+          // Play alert sound if there's a high severity alert
+          if (isSoundEnabled && formattedAlerts.some(alert => alert.level === 'high' || alert.level === 'severe')) {
+            playNotificationSound('alert');
+          }
+        }
+      } catch (alertError) {
+        console.error('Error fetching space weather alerts:', alertError);
+        // Continue with the app even if alerts fail to load
+      }
+      
+    } catch (error) {
+      console.error('Error loading real-time data:', error);
+      showNotification(
+        "Error loading data",
+        "Could not load real-time data. Using backup data instead.",
+        "destructive"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [solarData, showNotification, processForecastData, isSoundEnabled]);
+
+  // Toggle sound
+  const toggleSound = () => {
+    setIsSoundEnabled(!isSoundEnabled);
+    showNotification(
+      "Sound " + (!isSoundEnabled ? "enabled" : "disabled"),
+      "Notification sounds are now " + (!isSoundEnabled ? "enabled" : "disabled")
+    );
+  };
+  
+  useEffect(() => {
     // Initial fetch
     fetchRealTimeData();
     
@@ -170,11 +215,19 @@ const Index = () => {
       }
     }, 30000);
     
+    // Welcome notification with sound
+    setTimeout(() => {
+      showNotification(
+        "Welcome to Cosmic Forecast Protocol",
+        "Using CNN-LSTM neural network for space weather prediction"
+      );
+    }, 1000);
+    
     return () => {
       clearInterval(intervalId);
       unsubscribe();
     };
-  }, []);
+  }, [fetchRealTimeData, realTimeData, showNotification]);
 
   return (
     <div className="min-h-screen space-gradient">
@@ -209,6 +262,65 @@ const Index = () => {
             </div>
             
             <SolarDataPanel data={solarData} />
+            
+            <div className="flex justify-between items-center">
+              <div className="text-xs text-muted-foreground">
+                Last data refresh: {dataRefreshTime.toLocaleString()}
+              </div>
+              <button 
+                onClick={toggleSound}
+                className="text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="14" 
+                  height="14" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="lucide lucide-volume-2"
+                >
+                  {isSoundEnabled ? (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                    </>
+                  ) : (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <line x1="23" y1="9" x2="17" y2="15" />
+                      <line x1="17" y1="9" x2="23" y2="15" />
+                    </>
+                  )}
+                </svg>
+                {isSoundEnabled ? 'Sound On' : 'Sound Off'}
+              </button>
+              <button 
+                onClick={fetchRealTimeData} 
+                disabled={loading}
+                className="text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="14" 
+                  height="14" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className={`${loading ? 'animate-spin' : ''}`}
+                >
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                </svg>
+                {loading ? 'Refreshing...' : 'Refresh Data'}
+              </button>
+            </div>
           </div>
           
           {/* Right column */}
@@ -247,6 +359,8 @@ const Index = () => {
                 ))}
               </div>
             </div>
+            
+            <MLModelInfo className="hidden md:block" />
           </div>
         </div>
       </main>
