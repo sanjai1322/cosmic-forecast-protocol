@@ -199,7 +199,7 @@ const Index = () => {
           });
           setAlerts(formattedAlerts);
           
-          // Play alert sound if there's a high severity alert - only for new alerts
+          // Fix: Use proper type checking for high severity alerts
           if (isSoundEnabled && 
               formattedAlerts.some(alert => alert.level === 'high' || alert.level === 'severe') &&
               force) {
