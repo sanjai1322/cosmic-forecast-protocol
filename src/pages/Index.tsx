@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import Header from '@/components/Header';
@@ -28,6 +27,8 @@ const Index = () => {
   const [dataRefreshTime, setDataRefreshTime] = useState<Date>(new Date());
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  // Add throttle state to prevent too frequent refreshes
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
 
   // Helper function to format time ago
   const getTimeAgo = (date: Date): string => {
@@ -51,7 +52,7 @@ const Index = () => {
     return Math.floor(seconds) + ' seconds ago';
   };
 
-  // Safely render values with null checks to prevent "cannot read property of undefined" errors
+  // Safely render values with null checks
   const renderSafeValue = (value: any, decimals: number = 1): string => {
     if (value === undefined || value === null) return 'N/A';
     if (typeof value === 'number') return value.toFixed(decimals);
@@ -110,17 +111,30 @@ const Index = () => {
     }
   }, []);
 
-  // Function to fetch real-time data
-  const fetchRealTimeData = useCallback(async () => {
-    // Prevent multiple simultaneous refreshes
-    if (isRefreshing) {
+  // Function to fetch real-time data with throttling
+  const fetchRealTimeData = useCallback(async (force: boolean = false) => {
+    // Prevent refreshes that are too close together (minimum 5 seconds between manual refreshes)
+    const now = Date.now();
+    if (!force && isRefreshing) {
       console.log('Data refresh already in progress, skipping this request');
+      return;
+    }
+    
+    if (!force && (now - lastRefreshTime < 5000)) {
+      console.log('Refresh too soon, skipping to prevent UI lag');
       return;
     }
 
     try {
       setIsRefreshing(true);
-      setLoading(true);
+      // Gradually show loading state to prevent flickering
+      setTimeout(() => {
+        if (isRefreshing) {
+          setLoading(true);
+        }
+      }, 500);
+      
+      setLastRefreshTime(now);
       
       // Fetch solar wind data
       const recentData = await getMostRecentSolarWindData();
@@ -139,23 +153,28 @@ const Index = () => {
           playActivityLevelSound(processedData.activityLevel);
         }
         
-        // Generate ML prediction based on current data
-        setModelLoading(true);
-        const prediction = await predictSpaceWeather(
-          processedData.kpIndex,
-          processedData.solarWindSpeed,
-          processedData.magneticFieldBz
-        );
-        setMlPrediction(prediction);
-        setModelLoading(false);
+        // Generate ML prediction based on current data - only if user is active
+        // Add a small delay to improve perceived performance
+        setTimeout(() => {
+          setModelLoading(true);
+          predictSpaceWeather(
+            processedData.kpIndex,
+            processedData.solarWindSpeed,
+            processedData.magneticFieldBz
+          ).then(prediction => {
+            setMlPrediction(prediction);
+            processForecastData(prediction);
+            setModelLoading(false);
+          });
+        }, 300);
         
-        // Process forecast data for the chart
-        processForecastData(prediction);
-        
-        showNotification(
-          "Data updated",
-          "Real-time solar data has been loaded",
-        );
+        // Only show notification for manual refreshes
+        if (force) {
+          showNotification(
+            "Data updated",
+            "Real-time solar data has been loaded",
+          );
+        }
       }
       
       // Fetch alerts
@@ -180,11 +199,10 @@ const Index = () => {
           });
           setAlerts(formattedAlerts);
           
-          // Play alert sound if there's a high severity alert
-          if (isSoundEnabled && formattedAlerts.some(alert => {
-            // Use string literal comparison to avoid TypeScript errors
-            return alert.level === 'high' || alert.level === 'severe' as AlertLevel;
-          })) {
+          // Play alert sound if there's a high severity alert - only for new alerts
+          if (isSoundEnabled && 
+              formattedAlerts.some(alert => alert.level === 'high' || alert.level === 'severe') &&
+              force) {
             playNotificationSound('alert');
           }
         }
@@ -195,16 +213,21 @@ const Index = () => {
       
     } catch (error) {
       console.error('Error loading real-time data:', error);
-      showNotification(
-        "Error loading data",
-        "Could not load real-time data. Using backup data instead.",
-        "destructive"
-      );
+      if (force) {
+        showNotification(
+          "Error loading data",
+          "Could not load real-time data. Using backup data instead.",
+          "destructive"
+        );
+      }
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      // Use a timeout for smoother transitions
+      setTimeout(() => {
+        setLoading(false);
+        setIsRefreshing(false);
+      }, 300);
     }
-  }, [solarData, showNotification, processForecastData, isSoundEnabled, isRefreshing]);
+  }, [solarData, showNotification, processForecastData, isSoundEnabled, isRefreshing, lastRefreshTime]);
 
   // Toggle sound
   const toggleSound = () => {
@@ -216,19 +239,21 @@ const Index = () => {
   };
   
   useEffect(() => {
-    // Initial fetch
-    fetchRealTimeData();
+    // Initial fetch with a small delay to prevent initial jank
+    setTimeout(() => {
+      fetchRealTimeData(true);
+    }, 500);
     
-    // Subscribe to periodic updates (every 15 minutes instead of 5)
-    const intervalId = setInterval(fetchRealTimeData, 15 * 60 * 1000);
+    // Reduce polling frequency to every 30 minutes instead of 15 minutes
+    const intervalId = setInterval(() => fetchRealTimeData(false), 30 * 60 * 1000);
     
-    // Backup data subscription
+    // Backup data subscription with reduced frequency
     const unsubscribe = subscribeToSolarData((newData) => {
       // Only use if we don't have real data
       if (!realTimeData) {
         setSolarData(newData);
       }
-    }, 60000); // Slowed down from 30000ms to 60000ms
+    }, 120000); // Increased from 60000ms to 120000ms (2 minutes)
     
     // Welcome notification with sound
     setTimeout(() => {
@@ -236,7 +261,7 @@ const Index = () => {
         "Welcome to Cosmic Forecast Protocol",
         "Using CNN-LSTM neural network for space weather prediction"
       );
-    }, 2000); // Delayed welcome message to avoid overlap
+    }, 2500); // Delayed welcome message to avoid overlap
     
     return () => {
       clearInterval(intervalId);
@@ -248,16 +273,16 @@ const Index = () => {
   const dataSourceInfo = {
     real: "NOAA SWPC and NASA DONKI APIs with fallback to synthetic data",
     algorithm: "CNN-LSTM (Convolutional Neural Network-Long Short Term Memory) hybrid model",
-    refreshInterval: "Every 15 minutes"
+    refreshInterval: "Every 30 minutes"
   };
 
   return (
     <div className="min-h-screen space-gradient">
-      <Starfield />
+      <Starfield starCount={150} speed={0.03} /> {/* Reduced star count and speed for better performance */}
       
       <Header />
       
-      <main className="dashboard-container py-6">
+      <main className="dashboard-container py-6" style={{ transition: 'opacity 0.5s ease' }}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-6">
@@ -325,7 +350,7 @@ const Index = () => {
                 {isSoundEnabled ? 'Sound On' : 'Sound Off'}
               </button>
               <button 
-                onClick={fetchRealTimeData} 
+                onClick={() => fetchRealTimeData(true)} 
                 disabled={loading || isRefreshing}
                 className="text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
               >
