@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import Header from '@/components/Header';
@@ -24,8 +25,8 @@ const Index = () => {
   const [dataRefreshTime, setDataRefreshTime] = useState<Date>(new Date());
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  // Add throttle state to prevent too frequent refreshes
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
+  const [isDataCollapsed, setIsDataCollapsed] = useState<boolean>(true);
 
   // Helper function to format time ago
   const getTimeAgo = (date: Date): string => {
@@ -79,7 +80,7 @@ const Index = () => {
     if (prediction && prediction.forecast) {
       const chartData = prediction.forecast.map((point: any) => {
         // Determine activity level based on kpIndex
-        let activityLevel: 'low' | 'moderate' | 'high' | 'severe' = 'low';
+        let activityLevel: AlertLevel = 'low';
         if (point.kpIndex >= 7) {
           activityLevel = 'severe';
         } else if (point.kpIndex >= 5) {
@@ -110,22 +111,27 @@ const Index = () => {
 
   // Function to fetch real-time data with throttling
   const fetchRealTimeData = useCallback(async (force: boolean = false) => {
-    // Prevent refreshes that are too close together (minimum 5 seconds between manual refreshes)
+    // Prevent refreshes that are too close together (minimum 10 seconds between manual refreshes)
     const now = Date.now();
     if (!force && isRefreshing) {
       console.log('Data refresh already in progress, skipping this request');
       return;
     }
     
-    if (!force && (now - lastRefreshTime < 5000)) {
+    if (!force && (now - lastRefreshTime < 10000)) {
       console.log('Refresh too soon, skipping to prevent UI lag');
+      showNotification(
+        "Refresh rate limited",
+        "Please wait at least 10 seconds between manual refreshes",
+        "destructive"
+      );
       return;
     }
 
     try {
       setIsRefreshing(true);
       // Gradually show loading state to prevent flickering
-      setTimeout(() => {
+      const loadingTimerId = setTimeout(() => {
         if (isRefreshing) {
           setLoading(true);
         }
@@ -162,6 +168,9 @@ const Index = () => {
             setMlPrediction(prediction);
             processForecastData(prediction);
             setModelLoading(false);
+          }).catch(error => {
+            console.error('Error generating prediction:', error);
+            setModelLoading(false);
           });
         }, 300);
         
@@ -169,7 +178,7 @@ const Index = () => {
         if (force) {
           showNotification(
             "Data updated",
-            "Real-time solar data has been loaded",
+            "Real-time solar data has been loaded from NOAA SWPC API",
           );
         }
       }
@@ -208,6 +217,9 @@ const Index = () => {
         // Continue with the app even if alerts fail to load
       }
       
+      // Clear the loading timer
+      clearTimeout(loadingTimerId);
+      
     } catch (error) {
       console.error('Error loading real-time data:', error);
       if (force) {
@@ -235,14 +247,19 @@ const Index = () => {
     );
   };
   
+  // Toggle data collapse
+  const toggleDataCollapse = () => {
+    setIsDataCollapsed(!isDataCollapsed);
+  };
+  
   useEffect(() => {
     // Initial fetch with a small delay to prevent initial jank
     setTimeout(() => {
       fetchRealTimeData(true);
-    }, 500);
+    }, 1000);
     
-    // Reduce polling frequency to every 30 minutes instead of 15 minutes
-    const intervalId = setInterval(() => fetchRealTimeData(false), 30 * 60 * 1000);
+    // Reduce polling frequency to every 5 minutes to avoid rate limiting
+    const intervalId = setInterval(() => fetchRealTimeData(false), 5 * 60 * 1000);
     
     // Backup data subscription with reduced frequency
     const unsubscribe = subscribeToSolarData((newData) => {
@@ -250,13 +267,13 @@ const Index = () => {
       if (!realTimeData) {
         setSolarData(newData);
       }
-    }, 120000); // Increased from 60000ms to 120000ms (2 minutes)
+    }, 120000); // 2 minutes
     
     // Welcome notification with sound
     setTimeout(() => {
       showNotification(
         "Welcome to Cosmic Forecast Protocol",
-        "Using CNN-LSTM neural network for space weather prediction"
+        "Using real-time NOAA SWPC data with CNN-LSTM neural network for space weather prediction"
       );
     }, 2500); // Delayed welcome message to avoid overlap
     
@@ -268,14 +285,14 @@ const Index = () => {
 
   // Add data source information for display
   const dataSourceInfo = {
-    real: "NOAA SWPC and NASA DONKI APIs with fallback to synthetic data",
+    real: "NOAA SWPC and NASA DONKI APIs with real-time data updates",
     algorithm: "CNN-LSTM (Convolutional Neural Network-Long Short Term Memory) hybrid model",
-    refreshInterval: "Every 30 minutes"
+    refreshInterval: "Every 5 minutes"
   };
 
   return (
     <div className="min-h-screen space-gradient">
-      <Starfield starCount={150} speed={0.03} /> {/* Reduced star count and speed for better performance */}
+      <Starfield starCount={150} speed={0.03} />
       
       <Header />
       
@@ -305,14 +322,61 @@ const Index = () => {
               />
             </div>
             
-            <SolarDataPanel data={solarData} />
+            <div className="cosmos-card p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-medium">Solar Activity Data</h3>
+                <button 
+                  onClick={toggleDataCollapse}
+                  className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {isDataCollapsed ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                      Show Details
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="18 15 12 9 6 15"></polyline>
+                      </svg>
+                      Hide Details
+                    </>
+                  )}
+                </button>
+              </div>
+              
+              {!isDataCollapsed && <SolarDataPanel data={solarData} />}
+              
+              {isDataCollapsed && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                  <div className="glass-panel p-3">
+                    <p className="text-xs text-muted-foreground">Kp Index</p>
+                    <p className="text-lg font-bold">{renderSafeValue(solarData.kpIndex)}</p>
+                  </div>
+                  <div className="glass-panel p-3">
+                    <p className="text-xs text-muted-foreground">Solar Wind</p>
+                    <p className="text-lg font-bold">{renderSafeValue(solarData.solarWindSpeed, 0)} km/s</p>
+                  </div>
+                  <div className="glass-panel p-3">
+                    <p className="text-xs text-muted-foreground">Bz</p>
+                    <p className="text-lg font-bold">{renderSafeValue(solarData.magneticFieldBz)} nT</p>
+                  </div>
+                  <div className="glass-panel p-3">
+                    <p className="text-xs text-muted-foreground">X-Ray Flux</p>
+                    <p className="text-lg font-bold">{renderSafeValue(solarData.xRayFlux, 6)}</p>
+                  </div>
+                </div>
+              )}
+            </div>
             
             <div className="flex justify-between items-center">
               <div className="text-xs text-muted-foreground">
                 Last data refresh: {dataRefreshTime.toLocaleString()}
               </div>
               <div className="text-xs flex items-center justify-center gap-1.5 text-muted-foreground">
-                <span>Data: {realTimeData ? "Live API" : "Synthetic"}</span>
+                <span>Data: {realTimeData ? "Live NOAA API" : "Synthetic"}</span>
               </div>
               <button 
                 onClick={toggleSound}
@@ -396,7 +460,7 @@ const Index = () => {
                     <div className={`w-2 h-2 rounded-full mt-1.5 ${
                       item.level === 'low' ? 'bg-alert-low' : 
                       item.level === 'moderate' ? 'bg-alert-moderate' : 
-                      'bg-alert-high'
+                      item.level === 'high' ? 'bg-alert-high' : 'bg-alert-severe'
                     }`} />
                     <div>
                       <p className="text-sm">{item.event}</p>

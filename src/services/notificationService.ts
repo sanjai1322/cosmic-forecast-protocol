@@ -2,7 +2,7 @@
 // Types of notifications
 export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'alert';
 
-// Import AlertLevel type from Index.tsx to maintain consistency
+// Define AlertLevel type to ensure consistency throughout the application
 export type AlertLevel = 'low' | 'moderate' | 'high' | 'severe';
 
 // Sound configuration for different notification types
