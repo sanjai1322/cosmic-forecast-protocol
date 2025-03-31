@@ -9,11 +9,8 @@ import Starfield from '@/components/Starfield';
 import { SolarData, getCurrentSolarData, subscribeToSolarData } from '@/utils/spaceWeatherData';
 import { fetchSolarWindData, fetchSpaceWeatherAlerts, getMostRecentSolarWindData, processSolarWindData } from '@/services/solarDataService';
 import { predictSpaceWeather } from '@/services/mlModelService';
-import { playNotificationSound, playActivityLevelSound } from '@/services/notificationService';
+import { playNotificationSound, playActivityLevelSound, AlertLevel } from '@/services/notificationService';
 import MLModelInfo from '@/components/MLModelInfo';
-
-// Define alert level type to ensure consistency throughout the application
-export type AlertLevel = 'low' | 'moderate' | 'high' | 'severe';
 
 const Index = () => {
   const { toast } = useToast();
@@ -201,7 +198,7 @@ const Index = () => {
           
           // Check for high or severe alerts
           if (isSoundEnabled && 
-              formattedAlerts.some(alert => alert.level === 'high' || alert.level === 'severe') &&
+              formattedAlerts.some(alert => ['high', 'severe'].includes(alert.level as string)) &&
               force) {
             playNotificationSound('alert');
           }

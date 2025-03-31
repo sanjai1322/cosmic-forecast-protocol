@@ -2,6 +2,9 @@
 // Types of notifications
 export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'alert';
 
+// Import AlertLevel type from Index.tsx to maintain consistency
+export type AlertLevel = 'low' | 'moderate' | 'high' | 'severe';
+
 // Sound configuration for different notification types
 const soundMap: Record<NotificationType, string> = {
   info: '/sounds/info.mp3',
@@ -80,7 +83,7 @@ export const playNotificationSound = async (
  * @param activityLevel - Current space weather activity level
  */
 export const playActivityLevelSound = (
-  activityLevel: 'low' | 'moderate' | 'high' | 'severe'
+  activityLevel: AlertLevel
 ): void => {
   switch (activityLevel) {
     case 'severe':

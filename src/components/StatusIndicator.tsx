@@ -1,10 +1,8 @@
-
 import React from 'react';
-
-type StatusLevel = 'low' | 'moderate' | 'high' | 'severe';
+import { AlertLevel } from '@/services/notificationService';
 
 interface StatusIndicatorProps {
-  level: StatusLevel;
+  level: AlertLevel;
   className?: string;
 }
 
