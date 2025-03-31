@@ -12,14 +12,14 @@ import { predictSpaceWeather } from '@/services/mlModelService';
 import { playNotificationSound, playActivityLevelSound } from '@/services/notificationService';
 import MLModelInfo from '@/components/MLModelInfo';
 
-// Define alert level type to ensure consistency
-type AlertLevel = 'low' | 'moderate' | 'high' | 'severe';
+// Define alert level type to ensure consistency throughout the application
+export type AlertLevel = 'low' | 'moderate' | 'high' | 'severe';
 
 const Index = () => {
   const { toast } = useToast();
   const [solarData, setSolarData] = useState<SolarData>(getCurrentSolarData());
   const [realTimeData, setRealTimeData] = useState<SolarData | null>(null);
-  const [alerts, setAlerts] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<{time: string; event: string; level: AlertLevel}[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [mlPrediction, setMlPrediction] = useState<any>(null);
   const [forecastData, setForecastData] = useState<ForecastDataPoint[]>([]);
@@ -199,7 +199,7 @@ const Index = () => {
           });
           setAlerts(formattedAlerts);
           
-          // Fix: Use proper type checking for high severity alerts
+          // Check for high or severe alerts
           if (isSoundEnabled && 
               formattedAlerts.some(alert => alert.level === 'high' || alert.level === 'severe') &&
               force) {
