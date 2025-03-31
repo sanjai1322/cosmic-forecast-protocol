@@ -57,6 +57,11 @@ export const downloadCSV = (data: DataRow[], filename: string): void => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  
+  // Clean up the URL object after download
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 300);
 };
 
 /**
@@ -66,4 +71,32 @@ export const getTimestampedFilename = (baseName: string): string => {
   const now = new Date();
   const timestamp = now.toISOString().replace(/[:T.]/g, '-').slice(0, 19);
   return `${baseName}-${timestamp}.csv`;
+};
+
+/**
+ * Create a summary report CSV from alert data
+ */
+export const createAlertSummaryCSV = (alerts: any[]): string => {
+  if (!alerts || alerts.length === 0) return '';
+  
+  // Count alerts by level
+  const summary = {
+    total: alerts.length,
+    high: alerts.filter(a => a.level === 'high').length,
+    moderate: alerts.filter(a => a.level === 'moderate').length,
+    low: alerts.filter(a => a.level === 'low').length,
+    date: new Date().toISOString()
+  };
+  
+  // Create CSV content
+  const headers = ['Report Date', 'Total Alerts', 'High Priority', 'Moderate Priority', 'Low Priority'];
+  const values = [
+    `"${new Date(summary.date).toLocaleString()}"`,
+    summary.total,
+    summary.high,
+    summary.moderate,
+    summary.low
+  ];
+  
+  return `${headers.join(',')}\n${values.join(',')}`;
 };
