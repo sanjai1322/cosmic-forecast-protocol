@@ -30,8 +30,9 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = memo(({ level, className
       case 'moderate':
         return 'animate-pulse-slow';
       case 'high':
-      case 'severe':
         return 'animate-[pulse_0.7s_cubic-bezier(0.4,0,0.6,1)_infinite]';
+      case 'severe':
+        return 'animate-[pulse_0.5s_cubic-bezier(0.4,0,0.6,1)_infinite]';
       default:
         return 'animate-pulse';
     }

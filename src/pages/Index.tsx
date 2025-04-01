@@ -7,7 +7,7 @@ import SolarDataPanel from '@/components/SolarDataPanel';
 import AIPrediction from '@/components/AIPrediction';
 import Starfield from '@/components/Starfield';
 import { SolarData, getCurrentSolarData, subscribeToSolarData } from '@/utils/spaceWeatherData';
-import { fetchSolarWindData, fetchSpaceWeatherAlerts, getMostRecentSolarWindData, processSolarWindData } from '@/services/solarDataService';
+import { fetchSpaceWeatherAlerts, getMostRecentSolarWindData, processSolarWindData } from '@/services/solarDataService';
 import { predictSpaceWeather } from '@/services/mlModelService';
 import { playNotificationSound, playActivityLevelSound, AlertLevel, toastDuration } from '@/services/notificationService';
 import MLModelInfo from '@/components/MLModelInfo';
