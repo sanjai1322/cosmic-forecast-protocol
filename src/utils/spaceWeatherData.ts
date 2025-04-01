@@ -40,10 +40,10 @@ export const getCurrentSolarData = (): SolarData => {
   };
   
   // Determine activity level based on Kp index
-  if (baseData.kpIndex >= 5) {
-    baseData.activityLevel = 'high';
-  } else if (baseData.kpIndex >= 7) {
+  if (baseData.kpIndex >= 7) {
     baseData.activityLevel = 'severe';
+  } else if (baseData.kpIndex >= 5) {
+    baseData.activityLevel = 'high';
   } else if (baseData.kpIndex <= 2) {
     baseData.activityLevel = 'low';
   }
