@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import Header from '@/components/Header';
 import SolarVisualization from '@/components/SolarVisualization';
@@ -10,10 +9,11 @@ import Starfield from '@/components/Starfield';
 import { SolarData, getCurrentSolarData, subscribeToSolarData } from '@/utils/spaceWeatherData';
 import { fetchSolarWindData, fetchSpaceWeatherAlerts, getMostRecentSolarWindData, processSolarWindData } from '@/services/solarDataService';
 import { predictSpaceWeather } from '@/services/mlModelService';
-import { playNotificationSound, playActivityLevelSound, AlertLevel } from '@/services/notificationService';
+import { playNotificationSound, playActivityLevelSound, AlertLevel, toastDuration } from '@/services/notificationService';
 import MLModelInfo from '@/components/MLModelInfo';
 
 const Index = () => {
+  // Use refs to prevent unnecessary re-renders
   const { toast } = useToast();
   const [solarData, setSolarData] = useState<SolarData>(getCurrentSolarData());
   const [realTimeData, setRealTimeData] = useState<SolarData | null>(null);
@@ -27,6 +27,18 @@ const Index = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
   const [isDataCollapsed, setIsDataCollapsed] = useState<boolean>(true);
+  
+  // Use refs to track state without triggering re-renders
+  const isRefreshingRef = useRef(isRefreshing);
+  const lastRefreshTimeRef = useRef(lastRefreshTime);
+  const dataCollapseStateRef = useRef(isDataCollapsed);
+  
+  // Update refs when state changes
+  useEffect(() => {
+    isRefreshingRef.current = isRefreshing;
+    lastRefreshTimeRef.current = lastRefreshTime;
+    dataCollapseStateRef.current = isDataCollapsed;
+  }, [isRefreshing, lastRefreshTime, isDataCollapsed]);
 
   // Helper function to format time ago
   const getTimeAgo = (date: Date): string => {
@@ -57,12 +69,13 @@ const Index = () => {
     return String(value);
   };
   
-  // Function to show toast notifications with sound
+  // Function to show toast notifications with sound - less intrusive
   const showNotification = useCallback((title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
     toast({
       title,
       description,
       variant,
+      duration: toastDuration,
     });
     
     // Play corresponding sound based on notification type
@@ -109,22 +122,24 @@ const Index = () => {
     }
   }, []);
 
-  // Function to fetch real-time data with throttling
+  // Function to fetch real-time data with improved handling
   const fetchRealTimeData = useCallback(async (force: boolean = false) => {
-    // Prevent refreshes that are too close together (minimum 10 seconds between manual refreshes)
+    // Prevent refreshes that are too close together (minimum 30 seconds between manual refreshes)
     const now = Date.now();
-    if (!force && isRefreshing) {
+    if (!force && isRefreshingRef.current) {
       console.log('Data refresh already in progress, skipping this request');
       return;
     }
     
-    if (!force && (now - lastRefreshTime < 10000)) {
+    if (!force && (now - lastRefreshTimeRef.current < 30000)) {
       console.log('Refresh too soon, skipping to prevent UI lag');
-      showNotification(
-        "Refresh rate limited",
-        "Please wait at least 10 seconds between manual refreshes",
-        "destructive"
-      );
+      if (force) { // Only show notification for manual refreshes
+        showNotification(
+          "Refresh rate limited",
+          "Please wait at least 30 seconds between manual refreshes",
+          "destructive"
+        );
+      }
       return;
     }
 
@@ -132,10 +147,10 @@ const Index = () => {
       setIsRefreshing(true);
       // Gradually show loading state to prevent flickering
       const loadingTimerId = setTimeout(() => {
-        if (isRefreshing) {
+        if (isRefreshingRef.current) {
           setLoading(true);
         }
-      }, 500);
+      }, 800); // Longer delay to prevent UI flashing
       
       setLastRefreshTime(now);
       
@@ -144,6 +159,9 @@ const Index = () => {
       const processedData = processSolarWindData(recentData);
       
       if (processedData) {
+        // Preserve the data collapse state during refresh
+        const wasCollapsed = dataCollapseStateRef.current;
+        
         setSolarData({
           ...solarData,
           ...processedData
@@ -151,8 +169,15 @@ const Index = () => {
         setRealTimeData(processedData);
         setDataRefreshTime(new Date());
         
-        // Play sound based on activity level if it changed
-        if (isSoundEnabled && solarData.activityLevel !== processedData.activityLevel) {
+        // Make sure the collapse state doesn't change during refresh
+        if (wasCollapsed !== isDataCollapsed) {
+          setIsDataCollapsed(wasCollapsed);
+        }
+        
+        // Play sound based on activity level if it changed and it's a significant change
+        if (isSoundEnabled && 
+            solarData.activityLevel !== processedData.activityLevel &&
+            (processedData.activityLevel === 'high' || processedData.activityLevel === 'severe')) {
           playActivityLevelSound(processedData.activityLevel);
         }
         
@@ -174,11 +199,11 @@ const Index = () => {
           });
         }, 300);
         
-        // Only show notification for manual refreshes
+        // Only show notification for manual refreshes and make it less intrusive
         if (force) {
           showNotification(
             "Data updated",
-            "Real-time solar data has been loaded from NOAA SWPC API",
+            "Real-time solar data has been loaded",
           );
         }
       }
@@ -206,10 +231,23 @@ const Index = () => {
           setAlerts(formattedAlerts);
           
           // Check for high or severe alerts
-          if (isSoundEnabled && 
-              formattedAlerts.some(alert => ['high', 'severe'].includes(alert.level as string)) &&
-              force) {
+          const hasHighAlert = formattedAlerts.some(alert => 
+            ['high', 'severe'].includes(alert.level));
+            
+          if (isSoundEnabled && hasHighAlert && force) {
             playNotificationSound('alert');
+            
+            // Only show a notification for the most significant alert
+            const highestAlert = formattedAlerts.find(alert => 
+              alert.level === 'severe' || alert.level === 'high');
+              
+            if (highestAlert) {
+              showNotification(
+                "Space Weather Alert",
+                highestAlert.event,
+                "destructive"
+              );
+            }
           }
         }
       } catch (alertError) {
@@ -236,7 +274,7 @@ const Index = () => {
         setIsRefreshing(false);
       }, 300);
     }
-  }, [solarData, showNotification, processForecastData, isSoundEnabled, isRefreshing, lastRefreshTime]);
+  }, [solarData, showNotification, processForecastData, isSoundEnabled, isDataCollapsed]);
 
   // Toggle sound
   const toggleSound = () => {
@@ -258,8 +296,8 @@ const Index = () => {
       fetchRealTimeData(true);
     }, 1000);
     
-    // Reduce polling frequency to every 5 minutes to avoid rate limiting
-    const intervalId = setInterval(() => fetchRealTimeData(false), 5 * 60 * 1000);
+    // Reduce polling frequency to every 10 minutes to avoid rate limiting
+    const intervalId = setInterval(() => fetchRealTimeData(false), 10 * 60 * 1000);
     
     // Backup data subscription with reduced frequency
     const unsubscribe = subscribeToSolarData((newData) => {
@@ -269,11 +307,11 @@ const Index = () => {
       }
     }, 120000); // 2 minutes
     
-    // Welcome notification with sound
+    // Welcome notification with sound - less intrusive
     setTimeout(() => {
       showNotification(
         "Welcome to Cosmic Forecast Protocol",
-        "Using real-time NOAA SWPC data with CNN-LSTM neural network for space weather prediction"
+        "Using real-time NOAA SWPC data for space weather prediction"
       );
     }, 2500); // Delayed welcome message to avoid overlap
     
@@ -287,7 +325,7 @@ const Index = () => {
   const dataSourceInfo = {
     real: "NOAA SWPC and NASA DONKI APIs with real-time data updates",
     algorithm: "CNN-LSTM (Convolutional Neural Network-Long Short Term Memory) hybrid model",
-    refreshInterval: "Every 5 minutes"
+    refreshInterval: "Every 10 minutes"
   };
 
   return (

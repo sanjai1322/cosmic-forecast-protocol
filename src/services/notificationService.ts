@@ -101,3 +101,7 @@ export const playActivityLevelSound = (
       break;
   }
 };
+
+// Configuration for toast notifications
+export const toastDuration = 3000; // 3 seconds is less intrusive
+export const autoCloseToasts = true; // Auto-close all toasts

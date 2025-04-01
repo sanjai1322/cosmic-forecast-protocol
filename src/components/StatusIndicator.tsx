@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { AlertLevel } from '@/services/notificationService';
 
 interface StatusIndicatorProps {
@@ -7,7 +7,7 @@ interface StatusIndicatorProps {
   className?: string;
 }
 
-const StatusIndicator: React.FC<StatusIndicatorProps> = ({ level, className }) => {
+const StatusIndicator: React.FC<StatusIndicatorProps> = memo(({ level, className }) => {
   const getColorClass = () => {
     switch (level) {
       case 'low':
@@ -44,6 +44,8 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({ level, className }) =
       />
     </div>
   );
-};
+});
+
+StatusIndicator.displayName = 'StatusIndicator';
 
 export default StatusIndicator;
