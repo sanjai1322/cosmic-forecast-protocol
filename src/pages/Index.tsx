@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import Header from '@/components/Header';
@@ -18,12 +19,12 @@ const Index = () => {
   const [solarData, setSolarData] = useState<SolarData>(getCurrentSolarData());
   const [realTimeData, setRealTimeData] = useState<SolarData | null>(null);
   const [alerts, setAlerts] = useState<{time: string; event: string; level: AlertLevel}[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [mlPrediction, setMlPrediction] = useState<any>(null);
   const [forecastData, setForecastData] = useState<ForecastDataPoint[]>([]);
   const [modelLoading, setModelLoading] = useState<boolean>(false);
   const [dataRefreshTime, setDataRefreshTime] = useState<Date>(new Date());
-  const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
+  const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
   const [isDataCollapsed, setIsDataCollapsed] = useState<boolean>(true);
@@ -232,7 +233,7 @@ const Index = () => {
           
           // Check for high or severe alerts
           const hasHighAlert = formattedAlerts.some(alert => 
-            ['high', 'severe'].includes(alert.level));
+            ['high', 'severe'].includes(alert.level as AlertLevel));
             
           if (isSoundEnabled && hasHighAlert && force) {
             playNotificationSound('alert');
@@ -296,10 +297,9 @@ const Index = () => {
       fetchRealTimeData(true);
     }, 1000);
     
-    // Reduce polling frequency to every 10 minutes to avoid rate limiting
-    const intervalId = setInterval(() => fetchRealTimeData(false), 10 * 60 * 1000);
+    // No automatic interval refresh - removed auto polling
     
-    // Backup data subscription with reduced frequency
+    // Use local data as fallback
     const unsubscribe = subscribeToSolarData((newData) => {
       // Only use if we don't have real data
       if (!realTimeData) {
@@ -307,25 +307,24 @@ const Index = () => {
       }
     }, 120000); // 2 minutes
     
-    // Welcome notification with sound - less intrusive
+    // Welcome notification - less intrusive, only shows once
     setTimeout(() => {
       showNotification(
         "Welcome to Cosmic Forecast Protocol",
-        "Using real-time NOAA SWPC data for space weather prediction"
+        "Click Refresh Data to get the latest space weather information"
       );
-    }, 2500); // Delayed welcome message to avoid overlap
+    }, 2500);
     
     return () => {
-      clearInterval(intervalId);
       unsubscribe();
     };
   }, [fetchRealTimeData, realTimeData, showNotification]);
 
   // Add data source information for display
   const dataSourceInfo = {
-    real: "NOAA SWPC and NASA DONKI APIs with real-time data updates",
+    real: "NOAA SWPC and NASA DONKI APIs with manual data updates",
     algorithm: "CNN-LSTM (Convolutional Neural Network-Long Short Term Memory) hybrid model",
-    refreshInterval: "Every 10 minutes"
+    refreshInterval: "Manual refresh only"
   };
 
   return (
