@@ -3,7 +3,7 @@
  * PDF Export Utilities
  * Provides functions to create and download PDF reports
  */
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 interface ReportData {
@@ -132,7 +132,7 @@ and other stakeholders affected by space weather conditions.
     { Metric: 'Test RMSE', Value: metrics.testRMSE || 'N/A' }
   ];
   
-  const filename = `space_weather_analysis_${period}_${new Date().getTime()}.pdf`;
+  const filename = `space_weather_analysis_${period.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().getTime()}.pdf`;
   
   downloadPDF({
     title,

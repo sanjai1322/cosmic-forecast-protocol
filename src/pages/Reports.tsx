@@ -50,31 +50,43 @@ const Reports = () => {
   };
   
   const downloadReport = (reportName: string, period: string) => {
-    // Create metrics object for the report
-    const metrics = {
-      kpRange: "0.5 - 5.2",
-      maxSolarWind: "650 km/s",
-      stormOccurrence: period === "April 2025" ? "G2 (Moderate) on April 12" : "G1 (Minor) on Feb 15",
-      modelAccuracy: "87%",
-      avgKp: "2.7",
-      maxKp: "5.2",
-      avgSolarWind: "480",
-      minBz: "-8.3",
-      maxXRayFlux: "3.2×10−6",
-      modelRMSE: HybridModelPerformance.rootMeanSquaredError.overall.toFixed(2),
-      validationRMSE: HybridModelPerformance.validationMetrics.rmse.toString(),
-      testRMSE: HybridModelPerformance.testMetrics.rmse.toString()
-    };
-    
-    // Generate the report
-    createSpaceWeatherReport(reportName, period, metrics);
-    
-    // Show success notification
-    toast({
-      title: "Report Generated",
-      description: `"${reportName}" has been downloaded.`,
-      duration: 3000,
-    });
+    try {
+      // Create metrics object for the report
+      const metrics = {
+        kpRange: "0.5 - 5.2",
+        maxSolarWind: "650 km/s",
+        stormOccurrence: period === "April 2025" ? "G2 (Moderate) on April 12" : "G1 (Minor) on Feb 15",
+        modelAccuracy: "87%",
+        avgKp: "2.7",
+        maxKp: "5.2",
+        avgSolarWind: "480",
+        minBz: "-8.3",
+        maxXRayFlux: "3.2×10−6",
+        modelRMSE: HybridModelPerformance.rootMeanSquaredError.overall.toFixed(2),
+        validationRMSE: HybridModelPerformance.validationMetrics.rmse.toString(),
+        testRMSE: HybridModelPerformance.testMetrics.rmse.toString()
+      };
+      
+      console.log('Creating report with metrics:', metrics);
+      
+      // Generate the report
+      createSpaceWeatherReport(reportName, period, metrics);
+      
+      // Show success notification
+      toast({
+        title: "Report Generated",
+        description: `"${reportName}" has been downloaded.`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error generating PDF report:', error);
+      toast({
+        title: "Error Generating Report",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
 
   return (
