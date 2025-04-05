@@ -11,55 +11,107 @@ The visualization uses Three.js (via React Three Fiber) to create an interactive
 
 ### 1. Core Sun Object
 - Spherical mesh that represents the sun's surface
-- Textured with a high-resolution solar surface image
-- Emissive material creates the glowing effect
-- Slow rotation simulates the sun's actual rotation
+- Textured with a high-resolution solar surface image from NASA's Solar Dynamics Observatory
+- Emissive material creates the glowing effect, with intensity varying based on activity level
+- Slow rotation simulates the sun's actual rotation (approximately 27 days)
+- Temperature-accurate color gradient that shifts from yellow-orange (quiet) to intense white-yellow (active)
 
 ### 2. Corona Layer
 - Semi-transparent outer sphere that represents the sun's corona
-- Wireframe material visualizes the magnetic field lines
+- Wireframe material visualizes the magnetic field lines extending into space
 - Subtle animation shows the dynamic nature of the corona
+- Corona size and intensity scales with activity level to represent expanding solar atmosphere during heightened activity
 
 ### 3. Solar Flares
-- Torus (ring) geometries placed around the sun's surface
+- Torus (ring) geometries placed around the sun's surface represent solar flares and eruptions
 - Number and intensity of flares correspond to the current activity level:
-  - Low: 1 small flare
-  - Moderate: 3 medium flares
-  - High: 5 large flares
-  - Severe: 8 intense flares
-- Pulsating animation simulates the explosive nature of flares
+  - Low: 1-2 small flares with subtle animation
+  - Moderate: 3-4 medium flares with increased intensity
+  - High: 5-6 large flares with rapid animation
+  - Severe: 7-8 intense flares with maximum brightness and dynamic movement
+- Each flare has a unique pulsation pattern, simulating the explosive and unpredictable nature of solar eruptions
+- Particle effects emitted from flare locations represent ejected solar material
 
-### 4. Stars Background
-- Thousands of distant star points provide context
-- Creates depth and improves the visual experience
+### 4. Magnetic Field Visualization
+- Curved line geometries represent magnetic field lines connecting active regions
+- Field line complexity increases with activity level
+- During higher activity levels, field lines show disruption patterns characteristic of reconnection events
+
+### 5. Stars Background
+- Thousands of distant star points provide context and depth
+- Stars are implemented as a high-performance particle system
+- Subtle parallax effect when rotating the view enhances the 3D experience
 
 ## ACTIVITY LEVEL INDICATION
 
 The visualization communicates the current solar activity level through several visual cues:
 
 ### Low Activity (Green)
-- Minimal number of flares (1)
-- Calm, steady animation
-- Smaller flares with less intensity
+- Minimal number of flares (1-2)
+- Calm, steady animation with slow pulsation
+- Smaller flares with less intensity (30% brightness)
+- Corona appears more compact and stable
+- Sun surface has standard yellow-orange glow
 - Represents minimal risk to Earth systems
 
 ### Moderate Activity (Yellow)
-- Increased number of flares (3)
-- Slightly more active animation
-- Medium-sized flares
-- Represents minor potential impacts on Earth
+- Increased number of flares (3-4)
+- More active animation with medium pulsation rate
+- Medium-sized flares with moderate intensity (60% brightness)
+- Corona shows some expansion and movement
+- Sun surface becomes slightly brighter
+- Represents minor potential impacts on Earth's magnetosphere
 
 ### High Activity (Orange)
-- Significant number of flares (5)
-- Rapid animation
-- Larger, more intense flares
+- Significant number of flares (5-6)
+- Rapid animation with pronounced pulsation
+- Larger, more intense flares (80% brightness)
+- Corona shows significant expansion and turbulence
+- Surface brightness increases with localized bright regions
+- Field lines show increased complexity and disruption
 - Represents potential for disruption to radio communications and power grids
 
 ### Severe Activity (Red)
-- Maximum number of flares (8)
-- Highly dynamic animation with rapid pulses
-- Largest, most intense flares
+- Maximum number of flares (7-8)
+- Highly dynamic animation with rapid, irregular pulses
+- Largest, most intense flares (100% brightness)
+- Corona appears dramatically expanded and chaotic
+- Surface brightness reaches maximum with prominent bright regions
+- Field lines show extreme complexity with reconnection patterns
 - Represents high risk for significant impacts on Earth systems
+
+## SCIENTIFIC BASIS
+
+The visualization is based on real solar phenomena and scientific data:
+
+### Solar Features Represented:
+- **Photosphere**: The visible "surface" of the Sun, shown as the core sphere
+- **Chromosphere**: The lower atmosphere, represented as the innermost layer of the corona
+- **Corona**: The outer atmosphere, visualized as the expanding wireframe sphere
+- **Active Regions**: Areas of intense magnetic activity, shown as brighter regions
+- **Solar Flares**: Sudden eruptions of energy, visualized as glowing torus structures
+- **Coronal Mass Ejections (CMEs)**: Large expulsions of plasma and magnetic field, suggested by particle effects
+- **Magnetic Field Lines**: Force lines connecting regions of opposite polarity, shown as curved lines
+
+### Physical Processes Simulated:
+- **Magnetic Reconnection**: The breaking and reconnecting of magnetic field lines that releases energy
+- **Plasma Dynamics**: The movement of charged particles along magnetic field lines
+- **Radiative Processes**: The emission of light at various wavelengths shown through color changes
+- **Solar Rotation**: The approximately 27-day rotation period of the Sun
+
+## TECHNICAL IMPLEMENTATION
+
+The visualization leverages several advanced Three.js techniques:
+
+- **Physically-Based Rendering**: Uses realistic light models for the sun's glow
+- **Custom Shader Materials**: For the corona and flare effects
+- **Adaptive Detail Level**: Geometry detail scales based on device performance
+- **Mesh Creation**: Uses Three.js geometries and materials to create realistic celestial objects
+- **Lighting Effects**: Combines ambient lighting with emissive materials for the solar glow
+- **Animation System**: Uses requestAnimationFrame and React hooks for smooth animations
+- **Particle Systems**: Stars are implemented as particle systems for performance
+- **Texture Mapping**: Solar surface uses detailed texture mapping from NASA SDO imagery
+- **Fallback Mechanisms**: Includes a base64-encoded fallback texture if the main texture fails to load
 
 ## DATA CONNECTION
 
@@ -67,32 +119,20 @@ The visualization is directly tied to the real-time solar data:
 
 1. **Solar Data Input**: The component receives the current `solarActivityLevel` as a prop.
 
-2. **Dynamic Rendering**: When this level changes, the component re-renders with the appropriate number and intensity of flares.
+2. **Dynamic Rendering**: When this level changes, the component re-renders with the appropriate number and intensity of flares, corona expansion, and surface brightness.
 
-3. **User Interaction**: The visualization allows user interaction:
+3. **Animation Parameters**: Animation speeds, pulse rates, and color intensities are all computed based on the current activity level.
+
+4. **User Interaction**: The visualization allows user interaction:
    - Orbital controls for rotating the view
    - Zoom capability for examining details
    - Auto-rotation for continuous movement
 
-## TECHNICAL IMPLEMENTATION
-
-The visualization leverages several advanced Three.js techniques:
-
-- **Mesh Creation**: Uses Three.js geometries and materials to create realistic celestial objects
-- **Lighting Effects**: Combines ambient lighting with emissive materials for the solar glow
-- **Animation System**: Uses requestAnimationFrame and React hooks for smooth animations
-- **Particle Systems**: Stars are implemented as particle systems for performance
-- **Texture Mapping**: Solar surface uses detailed texture mapping
-- **Fallback Mechanisms**: Includes a base64-encoded fallback texture if the main texture fails to load
-
-## SCIENTIFIC BASIS
-
-While simplified, the visualization is based on real solar phenomena:
-
-- **Solar Flares**: Sudden bursts of energy on the sun's surface
-- **Corona**: The sun's outer atmosphere, visible during eclipses
-- **Solar Prominences**: Represented by the flares around the edge
-- **Solar Rotation**: The sun's actual rotation period is about 27 Earth days
+5. **Performance Optimization**: The visualization uses:
+   - Level-of-detail adjustments based on device performance
+   - Frame-rate throttling on lower-end devices
+   - Efficient geometry instancing for repeated elements
+   - Texture compression for faster loading
 
 ## USER BENEFITS
 
@@ -102,8 +142,12 @@ This visualization provides several benefits:
 
 2. **Engagement**: The interactive 3D model increases user engagement with the application.
 
-3. **Educational Value**: Helps users understand the dynamic nature of solar activity.
+3. **Educational Value**: Helps users understand the dynamic nature of solar activity and its impact on space weather.
 
 4. **Accessibility**: Makes complex space weather concepts accessible to non-specialists.
+
+5. **Real-Time Awareness**: Provides an immediate visual indicator of changing conditions.
+
+6. **Situational Context**: Gives users a visual context for understanding alerts and forecasts.
 
 The 3D visualization serves as both a functional indicator of current conditions and an engaging centerpiece for the Cosmic Forecast Protocol, making space weather monitoring more intuitive and visually compelling.

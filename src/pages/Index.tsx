@@ -8,7 +8,7 @@ import SolarDataPanel from '@/components/SolarDataPanel';
 import AIPrediction from '@/components/AIPrediction';
 import Starfield from '@/components/Starfield';
 import { SolarData, getCurrentSolarData, subscribeToSolarData } from '@/utils/spaceWeatherData';
-import { fetchSpaceWeatherAlerts, getMostRecentSolarWindData, processSolarWindData } from '@/services/solarDataService';
+import { fetchSpaceWeatherAlerts, getMostRecentSolarWindData, processSolarWindData, SpaceWeatherAlert } from '@/services/solarDataService';
 import { predictSpaceWeather } from '@/services/mlModelService';
 import { playNotificationSound, playActivityLevelSound, AlertLevel, toastDuration } from '@/services/notificationService';
 import MLModelInfo from '@/components/MLModelInfo';
@@ -179,7 +179,7 @@ const Index = () => {
         if (isSoundEnabled && 
             solarData.activityLevel !== processedData.activityLevel &&
             (processedData.activityLevel === 'high' || processedData.activityLevel === 'severe')) {
-          playActivityLevelSound(processedData.activityLevel);
+          playActivityLevelSound(processedData.activityLevel as AlertLevel);
         }
         
         // Generate ML prediction based on current data - only if user is active
@@ -218,6 +218,7 @@ const Index = () => {
             let level: AlertLevel = 'low';
             if (alert.message && alert.message.includes('WARNING')) level = 'high';
             else if (alert.message && alert.message.includes('WATCH')) level = 'moderate';
+            else if (alert.message && alert.message.includes('ALERT')) level = 'severe';
             
             // Format the time
             const issueTime = new Date(alert.issueTime || new Date());
@@ -233,7 +234,7 @@ const Index = () => {
           
           // Check for high or severe alerts
           const hasHighAlert = formattedAlerts.some(alert => 
-            ['high', 'severe'].includes(alert.level as AlertLevel));
+            ['high', 'severe'].includes(alert.level));
             
           if (isSoundEnabled && hasHighAlert && force) {
             playNotificationSound('alert');
@@ -295,7 +296,7 @@ const Index = () => {
     // Initial fetch with a small delay to prevent initial jank
     setTimeout(() => {
       fetchRealTimeData(true);
-    }, 1000);
+    }, 1500);
     
     // No automatic interval refresh - removed auto polling
     
