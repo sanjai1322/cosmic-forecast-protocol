@@ -7,8 +7,9 @@ import MLModelInfo from '@/components/MLModelInfo';
 import ModelPerformanceMetrics from '@/components/ModelPerformanceMetrics';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, BarChart } from 'lucide-react';
-import { exportToCSV } from '@/utils/csvExport';
+import { downloadCSV, getTimestampedFilename } from '@/utils/csvExport';
 import { setSoundsEnabled, areSoundsEnabled } from '@/services/notificationService';
+import { HybridModelPerformance } from '@/models/HybridCNNLSTMModel';
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days' | '365days'>('30days');
@@ -24,7 +25,8 @@ const Reports = () => {
       // More data would be here in a real app
     ];
 
-    exportToCSV(data, `space_weather_data_${timeRange}`);
+    const filename = getTimestampedFilename(`space_weather_data_${timeRange}`);
+    downloadCSV(data, filename);
   };
 
   const toggleSound = () => {
