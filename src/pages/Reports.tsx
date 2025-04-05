@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import HistoricalDataChart from '@/components/HistoricalDataChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,7 +59,6 @@ const Reports = () => {
       avgKp: "2.7",
       maxKp: "5.2",
       avgSolarWind: "480",
-      maxSolarWind: "650",
       minBz: "-8.3",
       maxXRayFlux: "3.2×10−6",
       modelRMSE: HybridModelPerformance.rootMeanSquaredError.overall.toFixed(4)
