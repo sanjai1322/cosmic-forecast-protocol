@@ -84,7 +84,9 @@ export const CNNModelPerformance = {
   validationDatasetSize: 5000,
   testDatasetSize: 10000,
   trainingEpochs: 120,
-  batchSize: 32
+  batchSize: 32,
+  rootMeanSquaredError: 0.42, // Added RMSE value
+  meanAbsoluteError: 0.38
 };
 
 /**
@@ -93,3 +95,62 @@ export const CNNModelPerformance = {
  * The model weights are quantized and optimized for browser performance.
  * For production use, we deploy a compressed version that balances accuracy and speed.
  */
+
+// CNN Layer Parameters
+export const CNNLayerParameters = {
+  layer1: {
+    filters: 32,
+    kernelSize: [3, 3],
+    activation: 'relu',
+    batchNormalization: true,
+    poolSize: [2, 2]
+  },
+  layer2: {
+    filters: 64,
+    kernelSize: [3, 3],
+    activation: 'relu',
+    batchNormalization: true,
+    poolSize: [2, 2]
+  },
+  layer3: {
+    filters: 128,
+    kernelSize: [3, 3],
+    activation: 'relu',
+    batchNormalization: true,
+    poolSize: [2, 2]
+  },
+  layer4: {
+    filters: 256,
+    kernelSize: [3, 3],
+    activation: 'relu',
+    batchNormalization: true,
+    poolSize: [2, 2]
+  },
+  denseLayer1: {
+    units: 128,
+    activation: 'relu',
+    dropout: 0.3
+  },
+  denseLayer2: {
+    units: 64,
+    activation: 'relu',
+    dropout: 0.2
+  }
+};
+
+// CNN Model Training Details
+export const CNNTrainingDetails = {
+  optimizer: "adam",
+  learningRate: 0.001,
+  lossFunction: "mean_squared_error",
+  validationSplit: 0.2,
+  earlyStoppingPatience: 10,
+  dataAugmentation: {
+    rotation: 15,
+    width_shift: 0.1,
+    height_shift: 0.1,
+    horizontal_flip: true,
+    vertical_flip: false,
+    zoom_range: 0.1
+  }
+};

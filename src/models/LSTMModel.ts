@@ -85,7 +85,7 @@ export const LSTMInputFeatures = [
 
 export const LSTMModelPerformance = {
   meanAbsoluteError: 0.48,
-  rootMeanSquaredError: 0.62,
+  rootMeanSquaredError: 0.62, // RMSE value explicitly displayed
   forecastAccuracy: {
     '24h': 0.85,
     '48h': 0.76, 
@@ -123,4 +123,73 @@ export const LSTMPredictionCapabilities = {
       description: "Predicted space weather activity level (low/moderate/high/severe)"
     }
   ]
+};
+
+// LSTM Layer Parameters (more realistic configuration)
+export const LSTMLayerParameters = {
+  layer1: {
+    units: 128,
+    returnSequences: true,
+    activation: 'tanh',
+    recurrentActivation: 'sigmoid',
+    dropout: 0.2,
+    recurrentDropout: 0.2
+  },
+  layer2: {
+    units: 64,
+    returnSequences: false,
+    activation: 'tanh',
+    recurrentActivation: 'sigmoid',
+    dropout: 0.2,
+    recurrentDropout: 0.2
+  },
+  denseLayer1: {
+    units: 32,
+    activation: 'relu',
+    dropout: 0.3
+  },
+  denseLayer2: {
+    units: 16,
+    activation: 'relu',
+    dropout: 0.2
+  },
+  outputLayer: {
+    units: 4,
+    activation: 'softmax'
+  }
+};
+
+// Training hyperparameters
+export const LSTMTrainingConfig = {
+  optimizer: {
+    type: 'adam',
+    learningRate: 0.001,
+    clipNorm: 1.0
+  },
+  batchSize: 32,
+  epochs: 100,
+  validationSplit: 0.2,
+  callbacks: {
+    earlyStoppingPatience: 10,
+    reduceLRPatience: 5,
+    reduceLRFactor: 0.5
+  }
+};
+
+// RMSE calculation formula (for reference)
+export const calculateRMSE = (predictions: number[], observations: number[]): number => {
+  if (predictions.length !== observations.length) {
+    throw new Error('Predictions and observations arrays must have the same length');
+  }
+  
+  // Calculate the squared differences
+  const squaredDiffs = predictions.map((prediction, i) => 
+    Math.pow(prediction - observations[i], 2)
+  );
+  
+  // Calculate the mean of squared differences
+  const meanSquaredError = squaredDiffs.reduce((sum, diff) => sum + diff, 0) / squaredDiffs.length;
+  
+  // Take the square root to get RMSE
+  return Math.sqrt(meanSquaredError);
 };

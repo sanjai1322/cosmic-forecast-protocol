@@ -26,6 +26,63 @@ const volumeMap: Record<NotificationType, number> = {
 // Cache for audio elements to prevent recreating them
 const audioCache: Record<string, HTMLAudioElement> = {};
 
+// Flag to track if sounds are enabled
+let soundsEnabled = false;
+
+/**
+ * Enable or disable notification sounds
+ * @param enable - Whether to enable sounds
+ */
+export const setSoundsEnabled = (enable: boolean): void => {
+  soundsEnabled = enable;
+  console.log(`Notification sounds ${enable ? 'enabled' : 'disabled'}`);
+  
+  // Test sound when enabling
+  if (enable) {
+    playNotificationSound('info', 0.2).catch(err => 
+      console.warn('Error playing test sound:', err)
+    );
+  }
+};
+
+/**
+ * Check if sounds are enabled
+ * @returns Whether sounds are enabled
+ */
+export const areSoundsEnabled = (): boolean => {
+  return soundsEnabled;
+};
+
+// Initialize the audio elements to fix autoplay issues
+export const initializeAudio = (): void => {
+  Object.entries(soundMap).forEach(([type, url]) => {
+    const audio = new Audio(url);
+    audio.preload = 'auto';
+    audio.volume = 0;
+    
+    // Create user interaction to allow autoplay later
+    const playAndPause = () => {
+      audio.play()
+        .then(() => {
+          setTimeout(() => {
+            audio.pause();
+            audio.currentTime = 0;
+          }, 10);
+        })
+        .catch(err => console.warn(`Could not preload ${type} sound:`, err));
+    };
+    
+    // Add event listener for user interaction
+    document.addEventListener('click', function handleClick() {
+      playAndPause();
+      document.removeEventListener('click', handleClick);
+    }, { once: true });
+    
+    // Store in cache
+    audioCache[url] = audio;
+  });
+};
+
 /**
  * Play a notification sound
  * @param type - Type of notification
@@ -36,13 +93,20 @@ export const playNotificationSound = async (
   type: NotificationType = 'info', 
   volume?: number
 ): Promise<void> => {
+  // If sounds are disabled, return immediately
+  if (!soundsEnabled) {
+    return Promise.resolve();
+  }
+  
   return new Promise((resolve, reject) => {
     try {
       const soundUrl = soundMap[type];
       
       // If we've already created this audio element, reuse it
       if (!audioCache[soundUrl]) {
-        audioCache[soundUrl] = new Audio(soundUrl);
+        const audio = new Audio(soundUrl);
+        audio.preload = 'auto';
+        audioCache[soundUrl] = audio;
       }
       
       const audio = audioCache[soundUrl];
@@ -68,7 +132,7 @@ export const playNotificationSound = async (
       // Play the sound
       audio.currentTime = 0; // Reset to start
       audio.play().catch(error => {
-        console.warn('Could not play notification sound:', error);
+        console.warn('Could not play notification sound:', error, 'URL:', soundUrl);
         resolve(); // Resolve anyway to not block the flow
       });
     } catch (error) {
@@ -85,23 +149,25 @@ export const playNotificationSound = async (
 export const playActivityLevelSound = (
   activityLevel: AlertLevel
 ): void => {
-  switch (activityLevel) {
-    case 'severe':
-      playNotificationSound('alert');
-      break;
-    case 'high':
-      playNotificationSound('error');
-      break;
-    case 'moderate':
-      playNotificationSound('warning');
-      break;
-    case 'low':
-    default:
-      playNotificationSound('info');
-      break;
-  }
+  // Map activity levels to notification types
+  const typeMap: Record<AlertLevel, NotificationType> = {
+    'low': 'info',
+    'moderate': 'warning',
+    'high': 'error',
+    'severe': 'alert'
+  };
+  
+  const notificationType = typeMap[activityLevel];
+  playNotificationSound(notificationType).catch(err => 
+    console.warn(`Failed to play ${activityLevel} activity sound:`, err)
+  );
 };
 
 // Configuration for toast notifications
 export const toastDuration = 3000; // 3 seconds is less intrusive
 export const autoCloseToasts = true; // Auto-close all toasts
+
+// Initialize audio on module load
+if (typeof document !== 'undefined') {
+  initializeAudio();
+}

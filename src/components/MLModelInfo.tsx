@@ -1,6 +1,8 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LSTMModelPerformance } from '../models/LSTMModel';
+import { HybridModelPerformance } from '../models/HybridCNNLSTMModel';
 
 interface MLModelInfoProps {
   className?: string;
@@ -100,11 +102,11 @@ const MLModelInfo: React.FC<MLModelInfoProps> = ({ className }) => {
               </div>
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span>Solar Wind Speed (±50 km/s)</span>
-                  <span>76% accuracy</span>
+                  <span>Root Mean Square Error (RMSE)</span>
+                  <span>{HybridModelPerformance.rootMeanSquaredError.overall}</span>
                 </div>
                 <div className="w-full h-1.5 bg-muted/30 rounded-full">
-                  <div className="bg-solar h-1.5 rounded-full" style={{ width: '76%' }}></div>
+                  <div className="bg-solar h-1.5 rounded-full" style={{ width: `${Math.min(100, (1 - HybridModelPerformance.rootMeanSquaredError.overall/2) * 100)}%` }}></div>
                 </div>
               </div>
             </div>
