@@ -62,29 +62,29 @@ const ModelPerformanceMetrics: React.FC<ModelPerformanceMetricsProps> = ({ class
                 </div>
               </div>
               <div className="bg-card/50 p-3 rounded-lg border border-border/40">
-                <h5 className="font-medium text-xs mb-2">SUB-MODELS</h5>
+                <h5 className="font-medium text-xs mb-2">VALIDATION & TEST METRICS</h5>
                 <div className="space-y-2">
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span>CNN Component RMSE</span>
-                      <span>{CNNModelPerformance.rootMeanSquaredError}</span>
+                      <span>Validation RMSE</span>
+                      <span>{HybridModelPerformance.validationMetrics.rmse}</span>
                     </div>
                     <div className="w-full h-1.5 bg-muted/30 rounded-full">
                       <div 
                         className="bg-purple-500 h-1.5 rounded-full" 
-                        style={{ width: `${Math.min(100, (1 - CNNModelPerformance.rootMeanSquaredError/2) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (1 - HybridModelPerformance.validationMetrics.rmse/1500) * 100)}%` }}
                       ></div>
                     </div>
                   </div>
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span>LSTM Component RMSE</span>
-                      <span>{LSTMModelPerformance.rootMeanSquaredError}</span>
+                      <span>Test RMSE</span>
+                      <span>{HybridModelPerformance.testMetrics.rmse}</span>
                     </div>
                     <div className="w-full h-1.5 bg-muted/30 rounded-full">
                       <div 
                         className="bg-green-500 h-1.5 rounded-full" 
-                        style={{ width: `${Math.min(100, (1 - LSTMModelPerformance.rootMeanSquaredError/2) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (1 - HybridModelPerformance.testMetrics.rmse/1500) * 100)}%` }}
                       ></div>
                     </div>
                   </div>
@@ -123,8 +123,8 @@ const ModelPerformanceMetrics: React.FC<ModelPerformanceMetricsProps> = ({ class
               prediction errors (residuals), which are a measure of how far from the regression line data points are.
             </p>
             <p className="mt-1">
-              Lower values indicate better model performance. Our model is continuously retrained 
-              on new data to maintain and improve prediction accuracy.
+              Lower values indicate better model performance. Our model validation RMSE is {HybridModelPerformance.validationMetrics.rmse} 
+              and test RMSE is {HybridModelPerformance.testMetrics.rmse}, showing strong predictive performance on unseen data.
             </p>
           </div>
         </div>

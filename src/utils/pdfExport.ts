@@ -113,6 +113,8 @@ Key findings:
 - Maximum solar wind speed: ${metrics.maxSolarWind || 'N/A'} km/s
 - Geomagnetic storm occurrence: ${metrics.stormOccurrence || 'No significant storms'}
 - Model prediction accuracy: ${metrics.modelAccuracy || 'N/A'}
+- Model validation RMSE: ${metrics.validationRMSE || 'N/A'}
+- Model test RMSE: ${metrics.testRMSE || 'N/A'}
 
 This information is crucial for satellite operators, power grid managers,
 and other stakeholders affected by space weather conditions.
@@ -125,7 +127,9 @@ and other stakeholders affected by space weather conditions.
     { Metric: 'Solar Wind Speed (Maximum)', Value: `${metrics.maxSolarWind || 'N/A'} km/s` },
     { Metric: 'IMF Bz (Minimum)', Value: `${metrics.minBz || 'N/A'} nT` },
     { Metric: 'X-Ray Flux (Maximum)', Value: metrics.maxXRayFlux || 'N/A' },
-    { Metric: 'Model RMSE', Value: metrics.modelRMSE || 'N/A' }
+    { Metric: 'Model RMSE (Overall)', Value: metrics.modelRMSE || 'N/A' },
+    { Metric: 'Validation RMSE', Value: metrics.validationRMSE || 'N/A' },
+    { Metric: 'Test RMSE', Value: metrics.testRMSE || 'N/A' }
   ];
   
   const filename = `space_weather_analysis_${period}_${new Date().getTime()}.pdf`;
@@ -137,4 +141,3 @@ and other stakeholders affected by space weather conditions.
     data
   }, filename);
 };
-

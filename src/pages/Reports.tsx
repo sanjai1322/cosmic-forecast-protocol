@@ -61,7 +61,9 @@ const Reports = () => {
       avgSolarWind: "480",
       minBz: "-8.3",
       maxXRayFlux: "3.2×10−6",
-      modelRMSE: HybridModelPerformance.rootMeanSquaredError.overall.toFixed(4)
+      modelRMSE: HybridModelPerformance.rootMeanSquaredError.overall.toFixed(2),
+      validationRMSE: HybridModelPerformance.validationMetrics.rmse.toString(),
+      testRMSE: HybridModelPerformance.testMetrics.rmse.toString()
     };
     
     // Generate the report
