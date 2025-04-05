@@ -1,20 +1,28 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import HistoricalDataChart from '@/components/HistoricalDataChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MLModelInfo from '@/components/MLModelInfo';
 import ModelPerformanceMetrics from '@/components/ModelPerformanceMetrics';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, BarChart } from 'lucide-react';
+import { Download, FileText, BarChart, Volume2, VolumeX } from 'lucide-react';
 import { downloadCSV, getTimestampedFilename } from '@/utils/csvExport';
 import { setSoundsEnabled, areSoundsEnabled } from '@/services/notificationService';
 import { HybridModelPerformance } from '@/models/HybridCNNLSTMModel';
+import { createSpaceWeatherReport } from '@/utils/pdfExport';
+import { useToast } from '@/hooks/use-toast';
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days' | '365days'>('30days');
   const [dataType, setDataType] = useState<'all' | 'kp' | 'solar-wind' | 'solar-flares'>('all');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(areSoundsEnabled());
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    // Initialize sound state on component mount
+    setSoundEnabled(areSoundsEnabled());
+  }, []);
 
   const handleExportData = () => {
     // Sample data for export
@@ -27,31 +35,77 @@ const Reports = () => {
 
     const filename = getTimestampedFilename(`space_weather_data_${timeRange}`);
     downloadCSV(data, filename);
+    
+    // Show success notification
+    toast({
+      title: "Data Exported Successfully",
+      description: `The file "${filename}" has been downloaded.`,
+      duration: 3000,
+    });
   };
 
   const toggleSound = () => {
     const newState = !soundEnabled;
     setSoundEnabled(newState);
-    setSoundEnabled(newState);
+    setSoundsEnabled(newState);
+  };
+  
+  const downloadReport = (reportName: string, period: string) => {
+    // Create metrics object for the report
+    const metrics = {
+      kpRange: "0.5 - 5.2",
+      maxSolarWind: "650 km/s",
+      stormOccurrence: period === "April 2025" ? "G2 (Moderate) on April 12" : "G1 (Minor) on Feb 15",
+      modelAccuracy: "87%",
+      avgKp: "2.7",
+      maxKp: "5.2",
+      avgSolarWind: "480",
+      maxSolarWind: "650",
+      minBz: "-8.3",
+      maxXRayFlux: "3.2×10−6",
+      modelRMSE: HybridModelPerformance.rootMeanSquaredError.overall.toFixed(4)
+    };
+    
+    // Generate the report
+    createSpaceWeatherReport(reportName, period, metrics);
+    
+    // Show success notification
+    toast({
+      title: "Report Generated",
+      description: `"${reportName}" has been downloaded.`,
+      duration: 3000,
+    });
   };
 
   return (
     <div className="container py-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Reports & Analytics</h1>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <Button
             variant="outline"
             onClick={toggleSound}
             className="flex items-center gap-2"
+            size="sm"
           >
-            {soundEnabled ? 'Disable Sounds' : 'Enable Sounds'}
+            {soundEnabled ? (
+              <>
+                <Volume2 size={16} />
+                Disable Sounds
+              </>
+            ) : (
+              <>
+                <VolumeX size={16} />
+                Enable Sounds
+              </>
+            )}
           </Button>
           <Button
             variant="outline"
             onClick={handleExportData}
             className="flex items-center gap-2"
+            size="sm"
           >
             <Download size={16} />
             Export Data
@@ -65,7 +119,7 @@ const Reports = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <CardTitle>Historical Data</CardTitle>
               
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-center gap-2">
                 <Tabs defaultValue={timeRange} onValueChange={(v) => setTimeRange(v as any)}>
                   <TabsList className="grid grid-cols-4 h-8">
                     <TabsTrigger value="7days" className="text-xs">7D</TabsTrigger>
@@ -113,7 +167,12 @@ const Reports = () => {
                   <div className="font-medium">Monthly Space Weather Review</div>
                   <div className="text-sm text-muted-foreground">April 2025</div>
                 </div>
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={() => downloadReport("Monthly Space Weather Review", "April 2025")}
+                >
                   <Download size={14} />
                   PDF
                 </Button>
@@ -124,7 +183,12 @@ const Reports = () => {
                   <div className="font-medium">Solar Cycle 25 Progress Report</div>
                   <div className="text-sm text-muted-foreground">Q1 2025</div>
                 </div>
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={() => downloadReport("Solar Cycle 25 Progress Report", "Q1 2025")}
+                >
                   <Download size={14} />
                   PDF
                 </Button>
@@ -135,7 +199,12 @@ const Reports = () => {
                   <div className="font-medium">Model Performance Analysis</div>
                   <div className="text-sm text-muted-foreground">March 2025</div>
                 </div>
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={() => downloadReport("Model Performance Analysis", "March 2025")}
+                >
                   <Download size={14} />
                   PDF
                 </Button>
@@ -146,7 +215,12 @@ const Reports = () => {
                   <div className="font-medium">Geomagnetic Storm Event Analysis</div>
                   <div className="text-sm text-muted-foreground">February 12-15, 2025</div>
                 </div>
-                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={() => downloadReport("Geomagnetic Storm Event Analysis", "February 12-15, 2025")}
+                >
                   <Download size={14} />
                   PDF
                 </Button>

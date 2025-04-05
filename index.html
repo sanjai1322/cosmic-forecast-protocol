@@ -7,7 +7,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cosmic Forecast Protocol - Space Weather Prediction System</title>
     <meta name="description" content="Advanced space weather monitoring and prediction system using CNN-LSTM deep learning models to forecast solar activity and geomagnetic conditions." />
-    <script src="/load-sounds.js"></script>
+    <script>
+      // Preload all sound files immediately to ensure they're available
+      document.addEventListener('DOMContentLoaded', function() {
+        const soundUrls = {
+          'info': 'https://cdn.freesound.org/previews/536/536113_11861866-lq.mp3',
+          'success': 'https://cdn.freesound.org/previews/320/320775_5260872-lq.mp3', 
+          'warning': 'https://cdn.freesound.org/previews/274/274607_5099947-lq.mp3',
+          'error': 'https://cdn.freesound.org/previews/560/560446_7031806-lq.mp3',
+          'alert': 'https://cdn.freesound.org/previews/397/397355_4284968-lq.mp3'
+        };
+        
+        // Create object to hold preloaded audio
+        window.cosmicSoundCache = {};
+        
+        // Preload each sound
+        Object.entries(soundUrls).forEach(([name, url]) => {
+          const audio = new Audio();
+          audio.src = url;
+          audio.preload = 'auto';
+          
+          // Store for later use
+          window.cosmicSoundCache[name] = audio;
+          
+          console.log(`Preloading ${name} sound`);
+          
+          // Attempt to load the audio
+          audio.load();
+        });
+        
+        // Initialize with a user interaction to allow autoplay later
+        document.addEventListener('click', function initAudio() {
+          // Play and immediately pause each sound to "unlock" audio on iOS/Safari
+          Object.values(window.cosmicSoundCache).forEach(audio => {
+            audio.volume = 0;
+            audio.play().then(() => {
+              setTimeout(() => {
+                audio.pause();
+                audio.currentTime = 0;
+              }, 10);
+            }).catch(err => console.log('Audio preload interaction failed:', err));
+          });
+          
+          // Only need this once
+          document.removeEventListener('click', initAudio);
+        }, { once: true });
+      });
+    </script>
     <style>
       /* Global transition slowdown */
       * {
@@ -21,12 +67,20 @@
       }
       
       .dashboard-container {
-        animation: slowFadeIn 1.2s ease-in-out;
+        animation: slowFadeIn 1.5s ease-in-out;
       }
       
       /* Add smooth scrolling */
       html {
         scroll-behavior: smooth;
+      }
+      
+      /* Better responsiveness */
+      @media (max-width: 640px) {
+        .container {
+          padding-left: 1rem;
+          padding-right: 1rem;
+        }
       }
     </style>
   </head>

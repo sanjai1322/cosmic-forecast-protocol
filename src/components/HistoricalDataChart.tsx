@@ -89,6 +89,7 @@ const HistoricalDataChart: React.FC<HistoricalDataChartProps> = ({
               fontSize: '12px',
               color: '#fff'
             }}
+            animationDuration={600}
           />
           <Legend wrapperStyle={{ fontSize: '10px' }} />
           
@@ -101,7 +102,9 @@ const HistoricalDataChart: React.FC<HistoricalDataChartProps> = ({
               stroke="#8884d8"
               fill="#8884d8"
               fillOpacity={0.3}
-              animationDuration={2000}
+              animationDuration={3000}
+              animationBegin={300}
+              isAnimationActive={true}
             />
           )}
           
@@ -114,7 +117,9 @@ const HistoricalDataChart: React.FC<HistoricalDataChartProps> = ({
               stroke="#82ca9d"
               fill="#82ca9d"
               fillOpacity={0.3}
-              animationDuration={2000}
+              animationDuration={3500}
+              animationBegin={500}
+              isAnimationActive={true}
             />
           )}
           
@@ -127,7 +132,9 @@ const HistoricalDataChart: React.FC<HistoricalDataChartProps> = ({
               stroke="#ffc658"
               fill="#ffc658"
               fillOpacity={0.3}
-              animationDuration={2000}
+              animationDuration={4000}
+              animationBegin={700}
+              isAnimationActive={true}
             />
           )}
           
@@ -140,7 +147,9 @@ const HistoricalDataChart: React.FC<HistoricalDataChartProps> = ({
               stroke="#ff8042"
               fill="#ff8042"
               fillOpacity={0.3}
-              animationDuration={2000}
+              animationDuration={4500}
+              animationBegin={900}
+              isAnimationActive={true}
             />
           )}
         </AreaChart>
