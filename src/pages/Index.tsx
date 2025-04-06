@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import Header from '@/components/Header';
@@ -70,23 +69,23 @@ const Index = () => {
     return String(value);
   };
   
-  // Function to show toast notifications with sound - less intrusive
+  // Function to show toast notifications with sound - but only for critical alerts
   const showNotification = useCallback((title: string, description: string, variant: 'default' | 'destructive' = 'default') => {
-    toast({
-      title,
-      description,
-      variant,
-      duration: toastDuration,
-    });
-    
-    // Play corresponding sound based on notification type
-    if (isSoundEnabled) {
-      if (variant === 'destructive') {
+    // Only show notifications for destructive/error messages
+    if (variant === 'destructive') {
+      toast({
+        title,
+        description,
+        variant,
+        duration: toastDuration,
+      });
+      
+      // Play corresponding sound based on notification type
+      if (isSoundEnabled) {
         playNotificationSound('error');
-      } else {
-        playNotificationSound('info');
       }
     }
+    // Skip non-critical notifications
   }, [toast, isSoundEnabled]);
 
   // Function to fetch and process forecast data
@@ -134,7 +133,8 @@ const Index = () => {
     
     if (!force && (now - lastRefreshTimeRef.current < 30000)) {
       console.log('Refresh too soon, skipping to prevent UI lag');
-      if (force) { // Only show notification for manual refreshes
+      if (force) { 
+        // Only show notification for rate limiting - this is important feedback
         showNotification(
           "Refresh rate limited",
           "Please wait at least 30 seconds between manual refreshes",
@@ -200,13 +200,7 @@ const Index = () => {
           });
         }, 300);
         
-        // Only show notification for manual refreshes and make it less intrusive
-        if (force) {
-          showNotification(
-            "Data updated",
-            "Real-time solar data has been loaded",
-          );
-        }
+        // Remove the data update notification - it's not necessary
       }
       
       // Fetch alerts
@@ -232,7 +226,7 @@ const Index = () => {
           });
           setAlerts(formattedAlerts);
           
-          // Check for high or severe alerts
+          // Check for high or severe alerts - we'll keep these as they're important
           const hasHighAlert = formattedAlerts.some(alert => 
             ['high', 'severe'].includes(alert.level));
             
@@ -281,10 +275,7 @@ const Index = () => {
   // Toggle sound
   const toggleSound = () => {
     setIsSoundEnabled(!isSoundEnabled);
-    showNotification(
-      "Sound " + (!isSoundEnabled ? "enabled" : "disabled"),
-      "Notification sounds are now " + (!isSoundEnabled ? "enabled" : "disabled")
-    );
+    // Remove the sound toggle notification
   };
   
   // Toggle data collapse
@@ -308,18 +299,12 @@ const Index = () => {
       }
     }, 120000); // 2 minutes
     
-    // Welcome notification - less intrusive, only shows once
-    setTimeout(() => {
-      showNotification(
-        "Welcome to Cosmic Forecast Protocol",
-        "Click Refresh Data to get the latest space weather information"
-      );
-    }, 2500);
+    // Remove welcome notification completely
     
     return () => {
       unsubscribe();
     };
-  }, [fetchRealTimeData, realTimeData, showNotification]);
+  }, [fetchRealTimeData, realTimeData]);
 
   // Add data source information for display
   const dataSourceInfo = {

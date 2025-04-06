@@ -35,12 +35,7 @@ const Reports = () => {
     const filename = getTimestampedFilename(`space_weather_data_${timeRange}`);
     downloadCSV(data, filename);
     
-    // Show success notification
-    toast({
-      title: "Data Exported Successfully",
-      description: `The file "${filename}" has been downloaded.`,
-      duration: 3000,
-    });
+    // Silently export without notification
   };
 
   const toggleSound = () => {
@@ -72,14 +67,15 @@ const Reports = () => {
       // Generate the report
       createSpaceWeatherReport(reportName, period, metrics);
       
-      // Show success notification
+      // Only show critical notifications - success for report download is useful feedback
       toast({
-        title: "Report Generated",
-        description: `"${reportName}" has been downloaded.`,
+        title: "Report Downloaded",
+        description: `${reportName} has been saved to your device.`,
         duration: 3000,
       });
     } catch (error) {
       console.error('Error generating PDF report:', error);
+      // Keep error notifications as they're important
       toast({
         title: "Error Generating Report",
         description: "Failed to generate PDF. Please try again.",
