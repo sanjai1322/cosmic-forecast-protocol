@@ -11,11 +11,14 @@ import { setSoundsEnabled, areSoundsEnabled } from '@/services/notificationServi
 import { HybridModelPerformance } from '@/models/HybridCNNLSTMModel';
 import { createSpaceWeatherReport } from '@/utils/pdfExport';
 import { useToast } from '@/hooks/use-toast';
+import MLModelTrainingVisualizer from '@/components/MLModelTrainingVisualizer';
+import TSNEVisualization from '@/components/TSNEVisualization';
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days' | '365days'>('30days');
   const [dataType, setDataType] = useState<'all' | 'kp' | 'solar-wind' | 'solar-flares'>('all');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(areSoundsEnabled());
+  const [isTraining, setIsTraining] = useState<boolean>(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -42,6 +45,11 @@ const Reports = () => {
     const newState = !soundEnabled;
     setSoundEnabled(newState);
     setSoundsEnabled(newState);
+  };
+  
+  const startModelTraining = () => {
+    setIsTraining(true);
+    // Training will automatically stop when the simulation completes
   };
   
   const downloadReport = (reportName: string, period: string) => {
@@ -153,11 +161,68 @@ const Reports = () => {
           </CardContent>
         </Card>
 
-        <MLModelInfo />
+        <TSNEVisualization />
       </div>
 
       <div className="grid grid-cols-1 gap-6">
         <ModelPerformanceMetrics />
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MLModelTrainingVisualizer isTraining={isTraining} />
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+              </svg>
+              Model Training & Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                Our CNN-LSTM hybrid model is trained on historical space weather data, solar imagery,
+                and multiple sensor readings. The model combines spatial features from solar imagery with
+                temporal patterns from sensor data.
+              </div>
+              
+              <div className="font-mono text-xs bg-black/80 text-green-400 p-3 rounded-md">
+                <div className="mb-1"># Python code for model training</div>
+                <div className="mb-1">import tensorflow as tf</div>
+                <div className="mb-1">from tensorflow.keras.layers import Conv2D, LSTM, Dense</div>
+                <div className="mb-1">from tensorflow.keras.optimizers import Adam</div>
+                <div className="mb-1">...</div>
+                <div className="mb-1">model = tf.keras.Sequential([</div>
+                <div className="mb-1">  Conv2D(32, (3, 3), activation='relu', input_shape=(160, 160, 3)),</div>
+                <div className="mb-1">  # More layers</div>
+                <div className="mb-1">  LSTM(50, return_sequences=True),</div>
+                <div className="mb-1">  Dense(1)</div>
+                <div className="mb-1">])</div>
+              </div>
+              
+              <div className="flex mt-4 gap-2">
+                <Button 
+                  onClick={startModelTraining}
+                  disabled={isTraining}
+                  variant="default"
+                >
+                  {isTraining ? 'Training in Progress...' : 'Start Training'}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setIsTraining(false)}
+                  disabled={!isTraining}
+                >
+                  Stop Training
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -279,6 +344,8 @@ Solar Wind RMSE: ${HybridModelPerformance.rootMeanSquaredError.solarWindSpeed} k
           </CardContent>
         </Card>
       </div>
+      
+      <MLModelInfo />
     </div>
   );
 };
