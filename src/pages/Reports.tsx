@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MLModelInfo from '@/components/MLModelInfo';
 import ModelPerformanceMetrics from '@/components/ModelPerformanceMetrics';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, BarChart, Volume2, VolumeX } from 'lucide-react';
+import { AlertTriangle, Download, FileText, BarChart, Volume2, VolumeX } from 'lucide-react';
 import { downloadCSV, getTimestampedFilename } from '@/utils/csvExport';
 import { setSoundsEnabled, areSoundsEnabled } from '@/services/notificationService';
 import { HybridModelPerformance } from '@/models/HybridCNNLSTMModel';
@@ -19,6 +19,7 @@ const Reports = () => {
   const [dataType, setDataType] = useState<'all' | 'kp' | 'solar-wind' | 'solar-flares'>('all');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(areSoundsEnabled());
   const [isTraining, setIsTraining] = useState<boolean>(false);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -52,7 +53,9 @@ const Reports = () => {
     // Training will automatically stop when the simulation completes
   };
   
-  const downloadReport = (reportName: string, period: string) => {
+  const downloadReport = async (reportName: string, period: string) => {
+    setIsDownloading(true);
+    
     try {
       // Create metrics object for the report
       const metrics = {
@@ -73,7 +76,7 @@ const Reports = () => {
       console.log('Creating report with metrics:', metrics);
       
       // Generate the report
-      createSpaceWeatherReport(reportName, period, metrics);
+      await createSpaceWeatherReport(reportName, period, metrics);
       
       // Only show critical notifications - success for report download is useful feedback
       toast({
@@ -90,6 +93,8 @@ const Reports = () => {
         variant: "destructive",
         duration: 3000,
       });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -176,7 +181,7 @@ const Reports = () => {
             <CardTitle className="flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                <path d="M3 5v14a2 2 0 0 2 2h16v-5"></path>
                 <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
               </svg>
               Model Training & Management
@@ -245,9 +250,19 @@ const Reports = () => {
                   size="sm" 
                   className="flex items-center gap-2"
                   onClick={() => downloadReport("Monthly Space Weather Review", "April 2025")}
+                  disabled={isDownloading}
                 >
-                  <Download size={14} />
-                  PDF
+                  {isDownloading ? (
+                    <>
+                      <span className="animate-spin mr-1">⏳</span>
+                      Processing
+                    </>
+                  ) : (
+                    <>
+                      <Download size={14} />
+                      PDF
+                    </>
+                  )}
                 </Button>
               </div>
               
@@ -261,9 +276,19 @@ const Reports = () => {
                   size="sm" 
                   className="flex items-center gap-2"
                   onClick={() => downloadReport("Solar Cycle 25 Progress Report", "Q1 2025")}
+                  disabled={isDownloading}
                 >
-                  <Download size={14} />
-                  PDF
+                  {isDownloading ? (
+                    <>
+                      <span className="animate-spin mr-1">⏳</span>
+                      Processing
+                    </>
+                  ) : (
+                    <>
+                      <Download size={14} />
+                      PDF
+                    </>
+                  )}
                 </Button>
               </div>
               
@@ -277,9 +302,19 @@ const Reports = () => {
                   size="sm" 
                   className="flex items-center gap-2"
                   onClick={() => downloadReport("Model Performance Analysis", "March 2025")}
+                  disabled={isDownloading}
                 >
-                  <Download size={14} />
-                  PDF
+                  {isDownloading ? (
+                    <>
+                      <span className="animate-spin mr-1">⏳</span>
+                      Processing
+                    </>
+                  ) : (
+                    <>
+                      <Download size={14} />
+                      PDF
+                    </>
+                  )}
                 </Button>
               </div>
               
@@ -293,9 +328,19 @@ const Reports = () => {
                   size="sm" 
                   className="flex items-center gap-2"
                   onClick={() => downloadReport("Geomagnetic Storm Event Analysis", "February 12-15, 2025")}
+                  disabled={isDownloading}
                 >
-                  <Download size={14} />
-                  PDF
+                  {isDownloading ? (
+                    <>
+                      <span className="animate-spin mr-1">⏳</span>
+                      Processing
+                    </>
+                  ) : (
+                    <>
+                      <Download size={14} />
+                      PDF
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

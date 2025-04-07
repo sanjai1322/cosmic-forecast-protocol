@@ -48,6 +48,7 @@ export const generatePDF = (reportData: ReportData): jsPDF => {
   if (reportData.data && reportData.data.length > 0) {
     const startY = reportData.content ? 60 : 40;
     
+    // Fix for jsPDF-autotable typing issue
     // @ts-ignore - jsPDF-autotable extends jsPDF
     doc.autoTable({
       startY: startY,
@@ -77,8 +78,13 @@ export const generatePDF = (reportData: ReportData): jsPDF => {
  * Download a PDF report
  */
 export const downloadPDF = (reportData: ReportData, filename: string): void => {
-  const doc = generatePDF(reportData);
-  doc.save(filename);
+  try {
+    const doc = generatePDF(reportData);
+    doc.save(filename);
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    throw new Error(`Failed to download PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 /**
@@ -102,8 +108,9 @@ export const createSpaceWeatherReport = (
   period: string,
   metrics: Record<string, any>
 ): void => {
-  const reportDate = formatReportDate();
-  const content = `
+  try {
+    const reportDate = formatReportDate();
+    const content = `
 This report provides an analysis of space weather conditions during ${period}. 
 The data includes key measurements of solar activity, geomagnetic conditions,
 and predictive model performance.
@@ -118,26 +125,30 @@ Key findings:
 
 This information is crucial for satellite operators, power grid managers,
 and other stakeholders affected by space weather conditions.
-  `.trim();
-  
-  const data = [
-    { Metric: 'Kp Index (Average)', Value: metrics.avgKp || 'N/A' },
-    { Metric: 'Kp Index (Maximum)', Value: metrics.maxKp || 'N/A' },
-    { Metric: 'Solar Wind Speed (Average)', Value: `${metrics.avgSolarWind || 'N/A'} km/s` },
-    { Metric: 'Solar Wind Speed (Maximum)', Value: `${metrics.maxSolarWind || 'N/A'} km/s` },
-    { Metric: 'IMF Bz (Minimum)', Value: `${metrics.minBz || 'N/A'} nT` },
-    { Metric: 'X-Ray Flux (Maximum)', Value: metrics.maxXRayFlux || 'N/A' },
-    { Metric: 'Model RMSE (Overall)', Value: metrics.modelRMSE || 'N/A' },
-    { Metric: 'Validation RMSE', Value: metrics.validationRMSE || 'N/A' },
-    { Metric: 'Test RMSE', Value: metrics.testRMSE || 'N/A' }
-  ];
-  
-  const filename = `space_weather_analysis_${period.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().getTime()}.pdf`;
-  
-  downloadPDF({
-    title,
-    date: reportDate,
-    content,
-    data
-  }, filename);
+    `.trim();
+    
+    const data = [
+      { Metric: 'Kp Index (Average)', Value: metrics.avgKp || 'N/A' },
+      { Metric: 'Kp Index (Maximum)', Value: metrics.maxKp || 'N/A' },
+      { Metric: 'Solar Wind Speed (Average)', Value: `${metrics.avgSolarWind || 'N/A'} km/s` },
+      { Metric: 'Solar Wind Speed (Maximum)', Value: `${metrics.maxSolarWind || 'N/A'} km/s` },
+      { Metric: 'IMF Bz (Minimum)', Value: `${metrics.minBz || 'N/A'} nT` },
+      { Metric: 'X-Ray Flux (Maximum)', Value: metrics.maxXRayFlux || 'N/A' },
+      { Metric: 'Model RMSE (Overall)', Value: metrics.modelRMSE || 'N/A' },
+      { Metric: 'Validation RMSE', Value: metrics.validationRMSE || 'N/A' },
+      { Metric: 'Test RMSE', Value: metrics.testRMSE || 'N/A' }
+    ];
+    
+    const filename = `space_weather_analysis_${period.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().getTime()}.pdf`;
+    
+    downloadPDF({
+      title,
+      date: reportDate,
+      content,
+      data
+    }, filename);
+  } catch (error) {
+    console.error('Error creating space weather report:', error);
+    throw new Error(`Failed to create report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
