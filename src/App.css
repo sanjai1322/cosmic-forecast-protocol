@@ -1,8 +1,15 @@
+
 #root {
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
   text-align: center;
+}
+
+@media (min-width: 768px) {
+  #root {
+    padding: 2rem;
+  }
 }
 
 .logo {
@@ -34,9 +41,49 @@
 }
 
 .card {
-  padding: 2em;
+  padding: 1em;
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: 2em;
+  }
 }
 
 .read-the-docs {
   color: #888;
+}
+
+/* Mobile optimizations */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Fix for mobile touch events */
+@media (max-width: 767px) {
+  button, 
+  [role="button"],
+  .interactive {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  
+  /* Improve touch target sizes for mobile */
+  input, 
+  select, 
+  textarea,
+  button {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Fix content overflow on small screens */
+.content-container {
+  max-width: 100%;
+  overflow-x: hidden;
 }

@@ -52,7 +52,18 @@
   }
 
   body {
-    @apply bg-space-dark text-foreground;
+    @apply bg-space-dark text-foreground overflow-x-hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Improved typography for mobile */
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+  }
+  
+  /* Add smooth scrolling */
+  html {
+    scroll-behavior: smooth;
   }
   
   .space-gradient {
@@ -76,6 +87,37 @@
   }
   
   .dashboard-container {
-    @apply container mx-auto px-4 py-6;
+    @apply container mx-auto px-3 py-4 md:px-4 md:py-6;
+  }
+  
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .dashboard-container {
+      @apply px-2 py-3;
+    }
+    
+    /* Improve tap target sizes on mobile */
+    button, a {
+      @apply min-h-9 min-w-9;
+    }
+    
+    /* Reduce paddings for mobile */
+    .card, .cosmos-card {
+      @apply p-3;
+    }
   }
 }
+
+/* Mobile-specific scrolling improvements */
+@media (max-width: 767px) {
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Fix for iOS input zooming */
+  input, select, textarea, button {
+    font-size: 16px;
+  }
+}
+
